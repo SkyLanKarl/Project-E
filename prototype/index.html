@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project E · 历史边界雏形</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">PROJECT E / PROTOTYPE 01</p>
+        <h1>历史边界</h1>
+      </div>
+      <div class="topbar-actions">
+        <span class="scope-badge">政权快照 · 非战线</span>
+        <button id="about-button" class="text-button" type="button">关于</button>
+      </div>
+    </header>
+
+    <main class="map-stage">
+      <div id="map" aria-label="可缩放的历史政权边界地图"></div>
+
+      <div id="loading" class="loading-panel" role="status">
+        <span class="loading-ring" aria-hidden="true"></span>
+        <strong>正在加载本地历史边界</strong>
+        <span id="loading-detail">Cliopatria v0.2.1</span>
+      </div>
+
+      <aside id="detail-panel" class="detail-panel" aria-labelledby="detail-title" hidden>
+        <button id="close-detail" class="close-button" type="button" aria-label="关闭详情">×</button>
+        <p class="panel-kicker">POLITY / 政权</p>
+        <h2 id="detail-title"></h2>
+        <p id="detail-original" class="detail-original"></p>
+        <p id="detail-period" class="detail-period"></p>
+        <dl class="detail-list">
+          <div><dt>记录面积</dt><dd id="detail-area"></dd></div>
+          <div><dt>几何状态</dt><dd id="detail-geometry-status"></dd></div>
+          <div><dt>政治关系</dt><dd id="detail-relation"></dd></div>
+          <div><dt>中文译名</dt><dd id="detail-name-review"></dd></div>
+          <div><dt>日期精度</dt><dd>年度区间；非政权存续期</dd></div>
+        </dl>
+        <div id="detail-links" class="detail-links"></div>
+        <p id="detail-source" class="source-note"></p>
+      </aside>
+
+      <aside id="about-panel" class="about-panel" aria-labelledby="about-title" hidden>
+        <button id="close-about" class="close-button" type="button" aria-label="关闭说明">×</button>
+        <p class="panel-kicker">ABOUT / 范围说明</p>
+        <h2 id="about-title">一个可验证的起点</h2>
+        <p>历史层保留 Cliopatria 原始几何，不为对齐现代岸线而裁切。年份变化采用记录过滤，不包含连续插值、军事战线或边界变化原因。</p>
+        <p>墨西哥 1913—1919 年使用经确认的 1912 年几何延续规则，并标为推断。2024 年切换到 Natural Earth 现代参考层，当前仍待人工审定。</p>
+        <p>中文名来自 Wikidata 或本地待审校译名表，英文原名始终保留。底层陆地、海岸线、河流和湖泊均来自 Natural Earth；所有地图数据均在本地。</p>
+        <a href="https://github.com/Seshat-Global-History-Databank/cliopatria" target="_blank" rel="noreferrer">Cliopatria 上游项目 ↗</a>
+        <a href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noreferrer">Natural Earth · 公共领域 ↗</a>
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">Cliopatria 数据许可 CC BY 4.0 ↗</a>
+      </aside>
+
+      <div class="map-caption">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span id="active-count">等待数据</span>
+      </div>
+    </main>
+
+    <footer class="timeline-panel">
+      <div class="timeline-heading">
+        <div>
+          <p class="eyebrow">SELECTED YEAR</p>
+          <output id="year-label" for="year-slider">公元 1800 年</output>
+        </div>
+        <label class="year-input-label">精确跳转
+          <input id="year-input" type="number" min="-3400" max="2024" step="1" value="1800" inputmode="numeric">
+        </label>
+      </div>
+
+      <div class="transport-row">
+        <button id="previous-year" class="icon-button" type="button" aria-label="上一个时间点">←</button>
+        <button id="play-button" class="play-button" type="button" aria-label="播放">▶ <span>播放</span></button>
+        <button id="next-year" class="icon-button" type="button" aria-label="下一个时间点">→</button>
+        <button id="speed-button" class="speed-button" type="button" aria-label="切换播放速度">1×</button>
+        <span id="step-label" class="step-label">现代时期每次前进 1 年</span>
+      </div>
+
+      <input id="year-slider" class="year-slider" type="range" min="-3400" max="2024" step="1" value="1800" aria-label="选择历史年份">
+      <div class="range-labels"><span>公元前 3400 年</span><span>公元 2024 年</span></div>
+      <nav class="quick-years" aria-label="常用年份">
+        <button type="button" data-year="-1000">前1000</button>
+        <button type="button" data-year="500">500</button>
+        <button type="button" data-year="1000">1000</button>
+        <button type="button" data-year="1500">1500</button>
+        <button type="button" data-year="1800">1800</button>
+        <button type="button" data-year="1914">1914</button>
+        <button type="button" data-year="2024">2024</button>
+      </nav>
+    </footer>
+  </div>
+
+  <script src="./vendor/maplibre-gl.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
