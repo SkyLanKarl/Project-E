@@ -74,10 +74,12 @@ http://127.0.0.1:8000/
 │   ├── styles.css                   # 地图与时间轴样式
 │   ├── app.js                       # 地图、年份、标签和详情交互
 │   ├── config/name-overrides.json   # 本地中文译名覆盖表
+│   ├── config/entity-qid-overrides.json # 经审查的实体 QID 纠错规则
 │   ├── scripts/
 │   │   ├── fetch_labels.py          # 分批获取 Wikidata 中文标签
 │   │   ├── fetch_polity_dates.py    # 分批获取 Wikidata 政权起止日期
 │   │   ├── fetch_polity_attributes.py # 下载首都、人口及其他政权属性
+│   │   ├── audit_wikipedia_qids.py  # 审查 Wikipedia 条目与 QID 对应关系
 │   │   └── prepare_data.py          # 生成网站使用的精简数据
 │   ├── data/                        # 可直接部署的处理后数据与许可
 │   └── vendor/                      # 本地 MapLibre 及许可

@@ -28,7 +28,7 @@ def collect_pages():
             features = json.load(source_file)["features"]
         for feature in features:
             properties = feature["properties"]
-            qid = properties.get(qid_field, "")
+            qid = correct_qid(properties, overrides)
             title = properties.get("Wikipedia", "")
             if qid.startswith("Q") and title:
                 pages[qid] = title.replace(" ", "_")

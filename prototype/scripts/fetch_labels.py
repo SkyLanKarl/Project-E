@@ -4,6 +4,8 @@ from pathlib import Path
 
 import requests
 
+from entity_identity import load_qid_overrides
+
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "data/raw/cliopatria/cliopatria_polities_only_v021.geojson"
 OUTPUT = ROOT / "data/raw/wikidata/labels-zh.json"
@@ -29,7 +31,7 @@ def main():
         feature["properties"].get("Wikidata", "")
         for feature in features
         if feature["properties"].get("Wikidata", "").startswith("Q")
-    })
+    } | {rule["target"] for rule in load_qid_overrides().values()})
     entities = {}
     requested = set()
     if OUTPUT.exists():

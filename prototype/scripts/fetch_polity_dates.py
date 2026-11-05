@@ -5,6 +5,8 @@ from pathlib import Path
 
 import requests
 
+from entity_identity import load_qid_overrides
+
 ROOT = Path(__file__).resolve().parents[2]
 SOURCES = (
     (ROOT / "data/raw/cliopatria/cliopatria_polities_only_v021.geojson", "Wikidata"),
@@ -26,6 +28,7 @@ def collect_qids():
             for feature in features
             if feature["properties"].get(field, "").startswith("Q")
         )
+    qids.update(rule["target"] for rule in load_qid_overrides().values())
     return sorted(qids)
 
 
