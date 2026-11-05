@@ -134,9 +134,13 @@ function updateLabels() {
   labelMarkers.forEach((marker) => marker.remove());
   labelMarkers = [];
   const zoom = map.getZoom();
-  const limit = zoom < 2 ? 30 : zoom < 3.5 ? 45 : 70;
+  const limit = zoom < 2 ? 45 : zoom < 3.5 ? 60 : 90;
   const candidates = activeCollection.features
-    .filter((feature) => feature.properties.FromYear <= year && feature.properties.ToYear >= year)
+    .filter((feature) => (
+      feature.properties.role !== "composite"
+      && feature.properties.FromYear <= year
+      && feature.properties.ToYear >= year
+    ))
     .sort((a, b) => (
       Number(b.properties.GeometryStatus === "carry-forward") - Number(a.properties.GeometryStatus === "carry-forward")
       || b.properties.LabelPriority - a.properties.LabelPriority
@@ -405,7 +409,9 @@ function initializeMap() {
   map.on("load", loadData);
   map.on("zoomend", updateLabels);
   map.on("click", "polity-fill", (event) => {
-    if (event.features?.length) showDetail(event.features[0].properties);
+    const feature = event.features?.find((item) => item.properties.role !== "composite")
+      || event.features?.[0];
+    if (feature) showDetail(feature.properties);
   });
   map.on("mouseenter", "polity-fill", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "polity-fill", () => { map.getCanvas().style.cursor = ""; });
