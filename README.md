@@ -4,33 +4,21 @@
 
 **在线访问：[https://skylankarl.github.io/Project-E/](https://skylankarl.github.io/Project-E/)**
 
-这是一个用于历史研究的静态网站雏形。当前版本以 Cliopatria 的历史政权几何为核心，结合 Natural Earth 的陆地、海洋、水系和 2024 年现代参考层，探索时间轴、地图缩放、双语名称及来源追溯等交互。
+这是一个用于历史研究的静态网站雏形。当前版本以 Cliopatria 的历史政权几何为核心，结合 Natural Earth 底图、可选的 DLR 高精度海岸对照层，以及以世界银行为主的 2024 年现代参考层，探索时间轴、地图缩放、双语名称及来源追溯等交互。
 
 > 当前展示的是按年份过滤的政治实体快照，不是连续军事战线，也不代表对历史主权、现实主权或争议地区归属的立场。
 
 ## 当前功能
 
 - 展示公元前 3400 年至公元 2024 年的政治实体几何记录；
-- 年份滑块、精确跳转、常用年份及播放速度控制；
-- 世界地图支持左右无限循环平移，几何和中文标签随世界副本显示；
-- 本地世界陆地、海洋、海岸线、河流和湖泊，无在线底图依赖；
+- 可自由拖动的时间轴、21 个年份节点、14 个时代按钮、精确跳转及逐年播放；
+- 平面 Web Mercator 地图支持左右无限循环平移，几何和中文标签随世界副本显示；
+- 默认使用本地 Natural Earth 陆地、海洋、海岸线、河流和湖泊，无在线底图依赖；
+- 可通过页面顶部的底版选择器或 `?base=dlr` 切换至 DLR z0–z6 海岸对照层；
 - 按缩放级别显示中文名称，详情保留英文原名及 Wikidata 链接；
 - 区分来源原始几何、复合政治实体、关系成员和推断延续几何；
 - 墨西哥 1913—1919 年采用单独确认的 1912 年几何延续规则；
-- 2024 年以 Natural Earth 为现代参考层；中国大陆及港澳改用 DataV 省级几何，台湾继续保留 Natural Earth 原记录；
-- 1953 年起显示用户提供的南海断续线，作为来源及版本待核的主张边界，不作为法定国界；
 - 静态部署到 GitHub Pages，推送 `main` 后自动更新。
-
-## 研究口径与限制
-
-- **几何版本有效期不等于政权存续期。**详情以来源区记录几何年份；政权存续时间取自 Wikidata 的建立时间（P571）和解散/废止时间（P576），与几何字段分开保存，仍需人工审校。缺失时标为待核实，只有建立日期时不推断为“至今”；存在多个候选日期时明确提示。
-- **不强行统一岸线。**Cliopatria 与 Natural Earth 的岸线可能不一致；历史层保留原始几何，不为了视觉效果按现代岸线裁切。
-- **不把政治实体记录数当作独立国家数。**复合政体、成员政体、殖民地和其他政治实体需要分别解释。
-- **不自动填补历史缺口。**当前仅墨西哥 1913—1919 年应用了明确的延续案例，并在地图和详情中标注为推断。
-- **2024 年参考层尚未完成人工审定。**Natural Earth 与 DataV 仅作为底稿；DataV 显示副本由 GCJ-02 转换为 WGS 84，未抽稀顶点，其许可、主权国及地区分类仍需继续审核。
-- **非政治实体不参与领土归属。**锡亚琴冰川与南极洲已移出政治实体层，不并入任何国家；争议地区的实际控制与主权主张应在未来分层记录。
-- 中文名称来自 Wikidata 或本地待审校译名表，不应视为已经完成的历史名词审定。
-- 当前尚无连续战线插值、边界段稳定对应关系、事件—边界关联和完整修订审核机制。
 
 ## 本地运行
 
@@ -53,9 +41,9 @@ http://127.0.0.1:8000/
 | 内容 | 来源 | 许可 | 使用说明 |
 |---|---|---|---|
 | 历史政权几何、年份区间 | [Cliopatria v0.2.1](https://github.com/Seshat-Global-History-Databank/cliopatria/tree/v0.2.1) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | 保留署名、许可链接和修改说明 |
-| 陆地、水系、海岸线及 2024 年参考底稿 | [Natural Earth](https://www.naturalearthdata.com/) | 公共领域 | 保留来源说明，继续审核历史适用性 |
-| DLR 海岸实验数据（可选对照模式） | [DLR TanDEM-X High-Resolution Coastline 2010–2015](https://doi.org/10.15489/entfdgi5es81) | CC BY 4.0 | © DLR 2019-2025；默认底版不变，使用 `?base=dlr` 启用实验对照 |
-| 2024 年现代国家／地区及争议叠加层 | [World Bank Official Boundaries](https://datacatalog.worldbank.org/search/dataset/0038272/world-bank-official-boundaries) | CC BY 4.0 | 保留 World Bank 署名；争议区只叠加，不替换现有边界 |
+| 默认陆地、水系、海岸线及台湾现代参考记录 | [Natural Earth](https://www.naturalearthdata.com/) | 公共领域 | 保留来源说明，继续审核历史适用性 |
+| DLR 海岸实验数据（可选对照模式） | [DLR TanDEM-X High-Resolution Coastline 2010–2015](https://doi.org/10.15489/entfdgi5es81) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | © DLR 2019-2025；网站使用经简化、裁剪和切片处理的 z0–z6 PBF，默认底版不变 |
+| 2024 年现代国家／地区及争议叠加层 | [World Bank Official Boundaries](https://datacatalog.worldbank.org/search/dataset/0038272/world-bank-official-boundaries) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | 保留 World Bank 署名并注明处理；该数据是现代参考边界，不是历史时间序列；争议区只叠加，不替换现有边界 |
 | CHGIS 府级本地研究层 | [CHGIS Version 6](https://dataverse.harvard.edu/dataverse/chgis_v6) | 非商业学术／教育使用，禁止未经许可公开再分发 | 仅在本地 `prototype/local/` 使用，不上传或部署完整图层 |
 | 2024 年中国省级边界 | [阿里云 DataV](https://geo.datav.aliyun.com/) | 待核实 | 原始坐标为 GCJ-02；显示副本转换为 WGS 84，未抽稀 |
 | 中文名称、政权日期及结构化属性 | [Wikidata](https://www.wikidata.org/) | [CC0 1.0](https://www.wikidata.org/wiki/Wikidata:Copyright) | 英文原名与实体 ID 同时保留，历史属性仍需审校 |
@@ -80,8 +68,12 @@ http://127.0.0.1:8000/
 │   │   ├── fetch_polity_dates.py    # 分批获取 Wikidata 政权起止日期
 │   │   ├── fetch_polity_attributes.py # 下载首都、人口及其他政权属性
 │   │   ├── audit_wikipedia_qids.py  # 审查 Wikipedia 条目与 QID 对应关系
-│   │   └── prepare_data.py          # 生成网站使用的精简数据
-│   ├── data/                        # 可直接部署的处理后数据与许可
+│   │   ├── build_dlr_tiles.py       # 将本地 DLR 原始数据生成为 z0–z6 PBF
+│   │   ├── prepare_chgis_local.py   # 生成仅供本地研究的 CHGIS 图层
+│   │   └── prepare_data.py          # 生成网站使用的处理后数据
+│   ├── data/                        # 可公开部署的处理后数据与许可
+│   ├── tiles/coastline/             # 可公开部署的 DLR 海岸瓦片
+│   ├── local/                       # 本地研究数据，由 Git 忽略且不得公开部署
 │   └── vendor/                      # 本地 MapLibre 及许可
 ├── 全球动态历史边界项目_开源项目与数据调研.md
 └── README.md
@@ -91,7 +83,7 @@ http://127.0.0.1:8000/
 
 ## 重新生成数据
 
-仅在需要更新原始数据或译名时执行。准备脚本会读取本地的 Cliopatria、Natural Earth 和 Wikidata 缓存，并重新生成 `prototype/data/`：
+仅在需要更新原始数据或译名时执行。准备脚本会读取本地的 Cliopatria、Natural Earth、世界银行、DataV、Wikidata 和 Wikipedia 缓存，并重新生成 `prototype/data/`：
 
 ```bash
 python prototype/scripts/prepare_data.py
@@ -114,7 +106,7 @@ python prototype/scripts/fetch_wikipedia_infoboxes.py
 python prototype/scripts/prepare_data.py
 ```
 
-原始数据需要分别放置在 `data/raw/cliopatria/`、`data/raw/natural-earth/` 和 `data/raw/wikidata/`；这些原始文件不随仓库分发。
+原始数据分别放置在 `data/raw/cliopatria/`、`data/raw/natural-earth/`、`data/raw/world-bank-boundaries/`、`data/raw/aliyun-datav/`、`data/raw/wikidata/` 和 `data/raw/wikipedia/`；这些原始文件不随仓库分发。DLR 原始海岸数据位于 `data/raw/coastline/dlr-tandemx-10m/`，其切片命令见 `prototype/scripts/build_dlr_tiles.py`。
 
 ## CHGIS 本地研究层
 
