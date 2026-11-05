@@ -140,6 +140,19 @@ function showDetail(properties) {
   map.setFilter("selected-outline", ["==", ["get", "id"], selectedId]);
 }
 
+function labelPointsInView(labelPoint, bounds) {
+  const [longitude, latitude] = labelPoint;
+  if (latitude < bounds.getSouth() || latitude > bounds.getNorth()) return [];
+  const points = [];
+  const firstCopy = Math.floor((bounds.getWest() - longitude) / 360);
+  const lastCopy = Math.ceil((bounds.getEast() - longitude) / 360);
+  for (let copy = firstCopy; copy <= lastCopy; copy += 1) {
+    const point = [longitude + copy * 360, latitude];
+    if (bounds.contains(point)) points.push(point);
+  }
+  return points;
+}
+
 function updateLabels() {
   if (!ready || !activeCollection) return;
   labelMarkers.forEach((marker) => marker.remove());
@@ -154,7 +167,7 @@ function updateLabels() {
       && feature.properties.ToYear >= year
       && (feature.properties.LabelMinZoom || 0) <= zoom
       && feature.properties.LabelPoint
-      && bounds.contains(feature.properties.LabelPoint)
+      && labelPointsInView(feature.properties.LabelPoint, bounds).length > 0
     ))
     .sort((a, b) => (
       Number(b.properties.GeometryStatus === "carry-forward") - Number(a.properties.GeometryStatus === "carry-forward")
@@ -170,15 +183,16 @@ function updateLabels() {
   }
   features.forEach((feature) => {
     const properties = feature.properties;
-    if (!properties.LabelPoint) return;
-    const label = document.createElement("div");
-    label.className = "polity-label";
-    label.textContent = properties.NameZh;
-    if (properties.GeometryStatus === "carry-forward") label.classList.add("is-inferred");
-    if (properties.role === "composite") label.classList.add("is-composite");
-    labelMarkers.push(new maplibregl.Marker({ element: label, anchor: "center" })
-      .setLngLat(properties.LabelPoint)
-      .addTo(map));
+    labelPointsInView(properties.LabelPoint, bounds).forEach((point) => {
+      const label = document.createElement("div");
+      label.className = "polity-label";
+      label.textContent = properties.NameZh;
+      if (properties.GeometryStatus === "carry-forward") label.classList.add("is-inferred");
+      if (properties.role === "composite") label.classList.add("is-composite");
+      labelMarkers.push(new maplibregl.Marker({ element: label, anchor: "center" })
+        .setLngLat(point)
+        .addTo(map));
+    });
   });
 }
 
@@ -445,7 +459,7 @@ function initializeMap() {
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
-    renderWorldCopies: false
+    renderWorldCopies: true
   });
   map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
   map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
