@@ -1,0 +1,19 @@
+{
+  "title": "World Bank Official Boundaries - High resolution GeoJSON",
+  "publisher": "World Bank",
+  "dataset_url": "https://datacatalog.worldbank.org/search/dataset/0038272/world-bank-official-boundaries",
+  "dataset_version": "2026-10-21",
+  "download_url": "https://datacatalogfiles.worldbank.org/ddh-published/0038272/DR0046666/wb_boundaries_geojson_highres.zip",
+  "license": "Creative Commons Attribution 4.0 International (CC BY 4.0)",
+  "license_url": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "World Bank Official Boundaries, World Bank, CC BY 4.0",
+  "contents": {
+    "WB_countries_Admin0.geojson": {"features": 251, "description": "High-resolution Admin-0 countries"},
+    "WB_Admin0_disputed_areas.geojson": {"features": 7, "description": "Disputed Admin-0 areas"},
+    "WB_Admin0_boundary_lines.geojson": {"features": 437, "description": "Admin-0 boundary lines"},
+    "WB_Admin0_disputed_areas_boundary_lines.geojson": {"features": 17, "description": "Disputed boundary lines"},
+    "WB_Coastlines.geojson": {"features": 4126, "description": "Coastline lines"},
+    "WB_Land.geojson": {"features": 11, "description": "Land polygons"}
+  },
+  "usage_note": "Modern reference boundaries; not historical time-series data. Preserve World Bank attribution and indicate modifications."
+}

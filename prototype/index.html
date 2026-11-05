@@ -22,6 +22,9 @@
             <option value="dlr">DLR 高精度（实验）</option>
           </select>
         </label>
+        <label id="chgis-control" class="chgis-control" hidden>
+          <input id="chgis-toggle" type="checkbox"> CHGIS 府级（本地）
+        </label>
         <span class="scope-badge">政权快照 · 非战线</span>
         <button id="about-button" class="text-button" type="button">关于</button>
       </div>
@@ -43,38 +46,36 @@
         <p id="detail-original" class="detail-original"></p>
         <p id="detail-period" class="detail-period"></p>
         <dl class="detail-list">
-          <div><dt>记录面积</dt><dd id="detail-area"></dd></div>
+          <div id="detail-area-row"><dt>面积</dt><dd id="detail-area"></dd></div>
+        </dl>
+        <dl id="detail-attributes" class="detail-list detail-attributes" hidden>
+          <div><dt>首都</dt><dd id="attribute-capital"></dd></div>
+          <div><dt>首都坐标</dt><dd id="attribute-capitalCoordinates"></dd></div>
+          <div><dt>人口</dt><dd id="attribute-population"></dd></div>
+          <div><dt>官方语言</dt><dd id="attribute-officialLanguage"></dd></div>
+          <div><dt>宗教</dt><dd id="attribute-religion"></dd></div>
+          <div><dt>货币</dt><dd id="attribute-currency"></dd></div>
+          <div><dt>政治体制</dt><dd id="attribute-governmentForm"></dd></div>
+          <div><dt>国家元首</dt><dd id="attribute-headOfState"></dd></div>
+          <div><dt>政府首脑</dt><dd id="attribute-headOfGovernment"></dd></div>
+          <div><dt>人物职务</dt><dd id="attribute-positionsHeld"></dd></div>
+          <div><dt>前身</dt><dd id="attribute-predecessor"></dd></div>
+          <div><dt>继承者</dt><dd id="attribute-successor"></dd></div>
+          <div><dt>实体类型</dt><dd id="attribute-entityType"></dd></div>
+          <div><dt>属于</dt><dd id="attribute-partOf"></dd></div>
+          <div><dt>组成成员</dt><dd id="attribute-hasParts"></dd></div>
+          <div><dt>下辖行政区</dt><dd id="attribute-administrativeDivisions"></dd></div>
+          <div><dt>外交关系</dt><dd id="attribute-diplomaticRelations"></dd></div>
+          <div><dt>成员身份</dt><dd id="attribute-memberOf"></dd></div>
+        </dl>
+        <p id="attribute-note" class="attribute-note" hidden>按当前年份筛选；无时间限定的记录会明确标注。人口和面积显示距当前年份最近的记录，不代表当前年份实测值。坐标格式为纬度、经度。</p>
+        <div id="detail-links" class="detail-links"></div>
+        <dl class="detail-list detail-metadata">
           <div><dt>几何状态</dt><dd id="detail-geometry-status"></dd></div>
-          <div><dt>政治关系</dt><dd id="detail-relation"></dd></div>
+          <div id="detail-relation-row"><dt>政治关系</dt><dd id="detail-relation"></dd></div>
           <div><dt>中文译名</dt><dd id="detail-name-review"></dd></div>
           <div><dt>日期精度</dt><dd>几何按年度记录；政权日期独立审核</dd></div>
         </dl>
-        <details id="detail-attributes" class="detail-attributes" hidden>
-          <summary>政权资料 <span id="attribute-count"></span></summary>
-          <dl class="detail-list">
-            <div><dt>首都</dt><dd id="attribute-capital"></dd></div>
-            <div><dt>首都坐标</dt><dd id="attribute-capitalCoordinates"></dd></div>
-            <div><dt>人口</dt><dd id="attribute-population"></dd></div>
-            <div><dt>面积</dt><dd id="attribute-area"></dd></div>
-            <div><dt>官方语言</dt><dd id="attribute-officialLanguage"></dd></div>
-            <div><dt>宗教</dt><dd id="attribute-religion"></dd></div>
-            <div><dt>货币</dt><dd id="attribute-currency"></dd></div>
-            <div><dt>政治体制</dt><dd id="attribute-governmentForm"></dd></div>
-            <div><dt>国家元首</dt><dd id="attribute-headOfState"></dd></div>
-            <div><dt>政府首脑</dt><dd id="attribute-headOfGovernment"></dd></div>
-            <div><dt>人物职务</dt><dd id="attribute-positionsHeld"></dd></div>
-            <div><dt>前身</dt><dd id="attribute-predecessor"></dd></div>
-            <div><dt>继承者</dt><dd id="attribute-successor"></dd></div>
-            <div><dt>实体类型</dt><dd id="attribute-entityType"></dd></div>
-            <div><dt>属于</dt><dd id="attribute-partOf"></dd></div>
-            <div><dt>组成成员</dt><dd id="attribute-hasParts"></dd></div>
-            <div><dt>下辖行政区</dt><dd id="attribute-administrativeDivisions"></dd></div>
-            <div><dt>外交关系</dt><dd id="attribute-diplomaticRelations"></dd></div>
-            <div><dt>成员身份</dt><dd id="attribute-memberOf"></dd></div>
-          </dl>
-          <p class="attribute-note">按当前年份筛选；无时间限定的记录会明确标注。人口和面积显示距当前年份最近的记录，不代表当前年份实测值。坐标格式为纬度、经度。</p>
-        </details>
-        <div id="detail-links" class="detail-links"></div>
         <p id="detail-source" class="source-note"></p>
       </aside>
 
@@ -118,7 +119,7 @@
 
       <div class="timeline-track">
         <div id="year-handle" class="year-handle" aria-hidden="true"></div>
-        <input id="year-slider" class="year-slider" type="range" min="0" max="17" step="1" value="13" aria-label="按时间节点选择历史年份">
+        <input id="year-slider" class="year-slider" type="range" min="0" max="20" step="0.01" value="13" aria-label="连续拖动历史时间轴">
       </div>
       <nav class="quick-years" aria-label="历史年份快捷按钮">
         <button type="button" data-year="-3400">前3400</button>
@@ -136,22 +137,33 @@
         <button type="button" data-year="1650">1650</button>
         <button type="button" data-year="1800">1800</button>
         <button type="button" data-year="1914">1914</button>
+        <button type="button" data-year="1918">1918</button>
+        <button type="button" data-year="1939">1939</button>
+        <button type="button" data-year="1945">1945</button>
         <button type="button" data-year="1950">1950</button>
         <button type="button" data-year="2000">2000</button>
         <button type="button" data-year="2024">2024</button>
       </nav>
       <nav class="era-buttons" aria-label="时代快捷按钮">
         <button type="button" data-era="远古文明" data-era-year="-3000">远古文明</button>
+        <button type="button" data-era="早期帝国" data-era-year="-1000">早期帝国</button>
         <button type="button" data-era="古典时代" data-era-year="0">古典时代</button>
-        <button type="button" data-era="中世纪" data-era-year="1000">中世纪</button>
+        <button type="button" data-era="中世纪早期" data-era-year="750">中世纪早期</button>
+        <button type="button" data-era="中世纪中期" data-era-year="1000">中世纪中期</button>
+        <button type="button" data-era="中世纪晚期" data-era-year="1250">中世纪晚期</button>
+        <button type="button" data-era="大航海时代" data-era-year="1500">大航海时代</button>
         <button type="button" data-era="近代早期" data-era-year="1650">近代早期</button>
-        <button type="button" data-era="近代" data-era-year="1800">近代</button>
-        <button type="button" data-era="现代" data-era-year="2024">现代</button>
+        <button type="button" data-era="工业时代" data-era-year="1800">工业时代</button>
+        <button type="button" data-era="第一次世界大战" data-era-year="1914">第一次世界大战</button>
+        <button type="button" data-era="战间期" data-era-year="1918">战间期</button>
+        <button type="button" data-era="第二次世界大战" data-era-year="1939">第二次世界大战</button>
+        <button type="button" data-era="战后时期" data-era-year="1950">战后时期</button>
+        <button type="button" data-era="当代" data-era-year="2024">当代</button>
       </nav>
     </footer>
   </div>
 
   <script src="./vendor/maplibre-gl.js"></script>
-  <script type="module" src="./app.js?v=20261105-timeline-drag"></script>
+  <script type="module" src="./app.js?v=20261105-chgis-local"></script>
 </body>
 </html>

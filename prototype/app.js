@@ -1,6 +1,6 @@
 const MIN_YEAR = -3400;
 const MAX_YEAR = 2024;
-const TIMELINE_NODES = [-3400, -3000, -2000, -1000, -500, 0, 250, 500, 750, 1000, 1250, 1500, 1650, 1800, 1914, 1950, 2000, 2024];
+const TIMELINE_NODES = [-3400, -3000, -2000, -1000, -500, 0, 250, 500, 750, 1000, 1250, 1500, 1650, 1800, 1914, 1918, 1939, 1945, 1950, 2000, 2024];
 const SPEEDS = [1, 2, 4];
 const COLORS = [
   "#6d8f78", "#ad8c63", "#7589a6", "#9b6f79", "#809b5c", "#a77f9d",
@@ -14,7 +14,6 @@ const elements = {
   yearInput: document.querySelector("#year-input"),
   yearSlider: document.querySelector("#year-slider"),
   yearHandle: document.querySelector("#year-handle"),
-  timelineTrack: document.querySelector(".timeline-track"),
   playButton: document.querySelector("#play-button"),
   speedButton: document.querySelector("#speed-button"),
   stepLabel: document.querySelector("#step-label"),
@@ -30,8 +29,10 @@ const elements = {
   detailSource: document.querySelector("#detail-source"),
   detailLinks: document.querySelector("#detail-links"),
   detailAttributes: document.querySelector("#detail-attributes"),
-  attributeCount: document.querySelector("#attribute-count"),
+  attributeNote: document.querySelector("#attribute-note"),
   baseSelect: document.querySelector("#base-select"),
+  chgisControl: document.querySelector("#chgis-control"),
+  chgisToggle: document.querySelector("#chgis-toggle"),
   aboutPanel: document.querySelector("#about-panel")
 };
 
@@ -48,6 +49,8 @@ let selectedId = null;
 let ready = false;
 let labelMarkers = [];
 let baseMode = new URLSearchParams(window.location.search).get("base") === "dlr" ? "dlr" : "natural-earth";
+let chgisCollection = null;
+let chgisEnabled = false;
 
 function formatYear(value) {
   if (value === 0) return "公元 0 年";
@@ -67,12 +70,20 @@ function timelinePercent(yearValue) {
 }
 
 function eraForYear(yearValue) {
-  if (yearValue < -1000) return "远古文明";
+  if (yearValue < -2000) return "远古文明";
+  if (yearValue < -500) return "早期帝国";
   if (yearValue < 500) return "古典时代";
-  if (yearValue < 1500) return "中世纪";
+  if (yearValue < 1000) return "中世纪早期";
+  if (yearValue < 1250) return "中世纪中期";
+  if (yearValue < 1500) return "中世纪晚期";
+  if (yearValue < 1650) return "大航海时代";
   if (yearValue < 1800) return "近代早期";
-  if (yearValue < 1914) return "近代";
-  return "现代";
+  if (yearValue < 1914) return "工业时代";
+  if (yearValue < 1918) return "第一次世界大战";
+  if (yearValue < 1939) return "战间期";
+  if (yearValue < 1945) return "第二次世界大战";
+  if (yearValue < 2000) return "战后时期";
+  return "当代";
 }
 
 function activeFilter(value) {
@@ -182,46 +193,61 @@ function positionsHeldText(entity) {
   return values.length ? [...new Set(values)].join("；") : "未提供任职记录";
 }
 
-function updatePolityAttributes(qid) {
-  const entity = polityAttributes.entities[qid];
-  const total = entity
-    ? Object.values(entity).reduce((sum, claims) => sum + claims.length, 0)
-    : 0;
-  elements.detailAttributes.hidden = !total;
-  if (!total) return false;
-  elements.attributeCount.textContent = `${total.toLocaleString("zh-CN")} 条记录`;
+function updatePolityAttributes(properties) {
+  const entity = polityAttributes.entities[properties.Wikidata];
+  const areaClaims = entity?.area || [];
+  const hasGeometryArea = properties.Area > 0;
+  const hasWikidataArea = !hasGeometryArea && areaClaims.length > 0;
+  elements.detailArea.textContent = hasGeometryArea
+    ? `${Math.round(properties.Area).toLocaleString("zh-CN")} km²`
+    : hasWikidataArea ? quantityText(areaClaims) : "";
+  elements.detailArea.closest("div").hidden = !hasGeometryArea && !hasWikidataArea;
+  let visible = 0;
+  const showAttribute = (field, text) => {
+    const value = document.querySelector(`#attribute-${field}`);
+    const unavailable = !text || [
+      "未提供", "当前年份无匹配记录", "未提供坐标", "未提供任职记录"
+    ].includes(text);
+    value.textContent = text;
+    value.closest("div").hidden = unavailable;
+    if (!unavailable) visible += 1;
+  };
   const fields = [
-    "capital", "population", "area", "officialLanguage", "religion", "currency",
+    "capital", "population", "officialLanguage", "religion", "currency",
     "governmentForm", "headOfState", "headOfGovernment", "predecessor", "successor",
     "entityType", "partOf", "hasParts", "administrativeDivisions", "diplomaticRelations", "memberOf"
   ];
   fields.forEach((field) => {
-    const claims = entity[field] || [];
-    let text = "未提供";
-    if ((field === "population" || field === "area") && claims.length) {
-      text = quantityText(claims, field === "population" ? "人" : "");
+    const claims = entity?.[field] || [];
+    let text = "";
+    if (field === "population" && claims.length) {
+      text = quantityText(claims, "人");
     } else if (claims.length) {
       const matching = claims.filter((claim) => attributeMatchesYear(claim, year));
       text = matching.length
         ? [...new Set(matching.map((claim) => {
           const id = claim.value?.id;
-          const label = polityAttributes.labels[id]?.label || id || "未知";
+          const label = polityAttributes.labels[id]?.label || id || claim.value?.text || "未知";
           return attributeHasTime(claim) ? label : `${label}（时间未注明）`;
         }))].join("、")
         : "当前年份无匹配记录";
     }
-    document.querySelector(`#attribute-${field}`).textContent = text;
+    showAttribute(field, text);
   });
-  document.querySelector("#attribute-capitalCoordinates").textContent = capitalCoordinatesText(entity);
-  document.querySelector("#attribute-positionsHeld").textContent = positionsHeldText(entity);
-  return true;
+  showAttribute("capitalCoordinates", entity ? capitalCoordinatesText(entity) : "");
+  showAttribute("positionsHeld", entity ? positionsHeldText(entity) : "");
+  elements.detailAttributes.hidden = visible === 0;
+  elements.attributeNote.hidden = visible === 0;
+  return visible > 0 || hasWikidataArea;
 }
 
 function showDetail(properties) {
   selectedId = properties.id;
   elements.detailTitle.textContent = properties.NameZh;
   elements.detailOriginal.textContent = properties.Name;
-  if (properties.role === "claim") {
+  if (properties.role === "chgis-prefecture") {
+    elements.detailPeriod.textContent = `政区记录有效期：${formatYear(properties.FromYear)} — ${formatYear(properties.ToYear)}；来自 CHGIS，不代表政权存续期。`;
+  } else if (properties.role === "claim" || properties.role === "disputed") {
     elements.detailPeriod.textContent = "非政治实体 · 不适用政权存续时间";
   } else {
     const subject = properties.role === "admin-province" ? "行政区存续时间" : "政权存续时间";
@@ -237,15 +263,14 @@ function showDetail(properties) {
     if (hasFrom && hasTo) period = `${fromText} — ${toText}`;
     if (hasFrom && !hasTo) period = `${fromText} 起；结束时间待核实`;
     if (!hasFrom && hasTo) period = `起始时间待核实 — ${toText}`;
-    const source = properties.PolityDateSource === "Wikidata" ? "（Wikidata，待审校）" : "";
+    const source = properties.PolityDateSource ? `（${properties.PolityDateSource}，待审校）` : "";
     const multiple = properties.PolityDateMultiple ? "；存在多个候选日期" : "";
     elements.detailPeriod.textContent = `${subject}：${period}${source}${multiple}`;
   }
-  elements.detailArea.textContent = properties.Area > 0
-    ? `${Math.round(properties.Area).toLocaleString("zh-CN")} km²`
-    : "未提供";
   if (properties.GeometryStatus === "claim") {
     elements.detailGeometryStatus.textContent = "主张边界 · 起始年及线段版本待核";
+  } else if (properties.GeometryStatus === "disputed") {
+    elements.detailGeometryStatus.textContent = "争议区域叠加 · 不改变现有边界";
   } else if (properties.GeometryStatus === "carry-forward") {
     elements.detailGeometryStatus.textContent = `推断延续 · 源几何为 ${formatYear(properties.SourceFromYear)}`;
   } else if (properties.GeometryStatus === "reference") {
@@ -255,6 +280,10 @@ function showDetail(properties) {
   }
   if (properties.role === "claim") {
     elements.detailRelation.textContent = "非政治实体 · 不作为法定国界";
+  } else if (properties.role === "disputed") {
+    elements.detailRelation.textContent = "争议区域 · 不表示主权归属结论";
+  } else if (properties.role === "chgis-prefecture") {
+    elements.detailRelation.textContent = "CHGIS 府级政区 · 仅本地研究层";
   } else if (properties.role === "admin-province") {
     elements.detailRelation.textContent = "中国省级行政区 · 2024 年参考";
   } else if (properties.Components) {
@@ -263,19 +292,26 @@ function showDetail(properties) {
   } else if (properties.MemberOf) {
     elements.detailRelation.textContent = `关系成员 · 属于：${localizedName(properties.MemberOf)}`;
   } else {
-    elements.detailRelation.textContent = "来源未标注从属关系";
+    elements.detailRelation.textContent = "";
   }
+  elements.detailRelation.closest("div").hidden = !elements.detailRelation.textContent;
   const nameReviewLabels = {
     wikidata: "Wikidata 中文标签",
     override: "本地译名 · 待审校",
     "natural-earth": "Natural Earth 中文名 · 待审定",
+    "world-bank": "World Bank 来源名称",
+    chgis: "CHGIS 中文名称",
     datav: "DataV 中文行政区名 · 待审定",
     pending: "待翻译"
   };
   elements.detailNameReview.textContent = nameReviewLabels[properties.NameReview] || "待审校";
-  const hasAttributes = updatePolityAttributes(properties.Wikidata);
+  const hasAttributes = updatePolityAttributes(properties);
   let sourceText;
-  if (properties.Source === "DataV") {
+  if (properties.Source === "CHGIS") {
+    sourceText = "来源：CHGIS Version 6. (c) Fairbank Center for Chinese Studies and the Institute for Chinese Historical Geography at Fudan University, Dec 2016. 仅限非商业学术研究；完整图层不得公开再分发。";
+  } else if (properties.Source === "World Bank") {
+    sourceText = "来源：World Bank Official Boundaries · 高精度现代参考数据 · CC BY 4.0；争议区仅作叠加，不改变现有中国或其他政权边界。";
+  } else if (properties.Source === "DataV") {
     sourceText = "来源：阿里云 DataV / 高德行政边界 · 显示副本由 GCJ-02 迭代转换为 WGS 84；原始顶点未抽稀，许可与审定状态待核。DataV 台湾省要素未导入，现有台湾记录仍来自 Natural Earth。";
   } else if (properties.Source === "user-provided") {
     sourceText = "来源：用户提供的十段线 GeoJSON · 几何来源、坐标系与版本待核；1953 年起始显示为当前项目设定，不是该几何自带的史料结论。";
@@ -292,11 +328,15 @@ function showDetail(properties) {
   } else {
     geometryPeriod = `几何版本有效期：${formatYear(properties.FromYear)} — ${formatYear(properties.ToYear)}。几何有效期不等于政权存续期。`;
   }
-  const polityDateSource = properties.PolityDateSource === "Wikidata"
-    ? " 政权日期来源：Wikidata P571/P576 · CC0 · 待审校。"
+  const polityDateSource = properties.PolityDateSource
+    ? ` 政权日期来源：${properties.PolityDateSource} · 待审校；Wikidata 为 CC0，Wikipedia 为 CC BY-SA 4.0。`
     : "";
+  const attributeEntity = polityAttributes.entities[properties.Wikidata];
+  const hasWikipediaAttributes = attributeEntity && Object.values(attributeEntity).some((claims) => (
+    claims.some((claim) => claim.source === "Wikipedia")
+  ));
   const polityAttributeSource = hasAttributes
-    ? " 扩展属性来源：Wikidata · CC0 · 待审校；按年份筛选或标注记录年份。"
+    ? ` 扩展属性来源：Wikidata（CC0）${hasWikipediaAttributes ? "、Wikipedia（CC BY-SA 4.0）" : ""} · 待审校；按年份筛选或标注记录年份。`
     : "";
   elements.detailSource.textContent = `${sourceText} ${geometryPeriod}${polityDateSource}${polityAttributeSource}`;
   elements.detailLinks.replaceChildren();
@@ -332,7 +372,10 @@ function updateLabels() {
   const zoom = map.getZoom();
   const bounds = map.getBounds();
   const limit = zoom < 2 ? 45 : zoom < 3.5 ? 60 : 90;
-  const candidates = activeCollection.features
+  const sourceFeatures = chgisEnabled && chgisCollection
+    ? [...activeCollection.features, ...chgisCollection.features]
+    : activeCollection.features;
+  const candidates = sourceFeatures
     .filter((feature) => (
       feature.properties.role !== "composite"
       && feature.properties.FromYear <= year
@@ -378,17 +421,19 @@ function updateActiveCount() {
   elements.activeCount.textContent = `${formatYear(year)} · ${active.length.toLocaleString("zh-CN")} 个政治实体记录${suffix}`;
 }
 
-function setYear(nextYear) {
+function setYear(nextYear, sliderPosition = null) {
   const index = nearestTimelineIndex(nextYear);
-  year = TIMELINE_NODES[index];
+  year = sliderPosition === null
+    ? TIMELINE_NODES[index]
+    : Math.max(MIN_YEAR, Math.min(MAX_YEAR, Math.round(nextYear)));
   elements.yearLabel.textContent = formatYear(year);
   elements.yearInput.value = year;
-  elements.yearSlider.value = index;
-  elements.yearHandle.style.left = `${timelinePercent(year)}%`;
+  elements.yearSlider.value = sliderPosition ?? index;
+  elements.yearHandle.style.left = `${sliderPosition === null ? timelinePercent(year) : sliderPosition / (TIMELINE_NODES.length - 1) * 100}%`;
   document.querySelectorAll("[data-era]").forEach((button) => {
     button.classList.toggle("is-active", button.dataset.era === eraForYear(year));
   });
-  elements.stepLabel.textContent = "按时间节点前进";
+  elements.stepLabel.textContent = "每次前进 1 年";
   document.querySelectorAll("[data-year]").forEach((button) => {
     button.classList.toggle("is-active", Number(button.dataset.year) === year);
   });
@@ -404,20 +449,33 @@ function setYear(nextYear) {
     map.setFilter("polity-line", activeFilter(year));
     map.setLayoutProperty("south-china-sea-line", "visibility", year >= 1953 ? "visible" : "none");
     map.setLayoutProperty("south-china-sea-line-hit", "visibility", year >= 1953 ? "visible" : "none");
+    map.setLayoutProperty("disputed-fill", "visibility", year === 2024 ? "visible" : "none");
+    map.setLayoutProperty("disputed-line", "visibility", year === 2024 ? "visible" : "none");
     if (selectedId !== null) {
       const selected = activeCollection.features[selectedId];
       if (!selected || selected.properties.FromYear > year || selected.properties.ToYear < year) closeDetail();
     }
+    if (chgisEnabled) updateChgisFilter();
     updateLabels();
   }
   updateActiveCount();
   if (year === MAX_YEAR && playing) stopPlayback();
 }
 
+function timelinePositionForYear(yearValue) {
+  if (yearValue <= TIMELINE_NODES[0]) return 0;
+  if (yearValue >= MAX_YEAR) return TIMELINE_NODES.length - 1;
+  for (let index = 0; index < TIMELINE_NODES.length - 1; index += 1) {
+    const left = TIMELINE_NODES[index];
+    const right = TIMELINE_NODES[index + 1];
+    if (yearValue >= left && yearValue <= right) return index + (yearValue - left) / (right - left);
+  }
+  return 0;
+}
+
 function moveYear(direction) {
-  const index = nearestTimelineIndex(year);
-  const nextIndex = Math.max(0, Math.min(TIMELINE_NODES.length - 1, index + direction));
-  setYear(TIMELINE_NODES[nextIndex]);
+  const nextYear = Math.max(MIN_YEAR, Math.min(MAX_YEAR, year + direction));
+  setYear(nextYear, timelinePositionForYear(nextYear));
 }
 
 function stopPlayback() {
@@ -453,9 +511,80 @@ function setBaseMode(mode) {
   map.setLayoutProperty("dlr-coastline-line", "visibility", useDlr ? "visible" : "none");
 }
 
+function updateChgisFilter() {
+  if (!chgisCollection) return;
+  const activeFeatures = chgisCollection.features.filter((feature) => (
+    feature.properties.FromYear <= year && feature.properties.ToYear >= year
+  ));
+  map.getSource("chgis-prefectures").setData({ type: "FeatureCollection", features: activeFeatures });
+  map.setFilter("chgis-fill", activeFilter(year));
+  map.setFilter("chgis-line", activeFilter(year));
+}
+
+async function setChgisEnabled(enabled) {
+  chgisEnabled = enabled;
+  elements.chgisToggle.checked = enabled;
+  if (enabled && !chgisCollection) {
+    try {
+      chgisCollection = await fetchGeoJson("./local/chgis-prefectures.geojson");
+      map.addSource("chgis-prefectures", {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: chgisCollection.features.filter((feature) => (
+            feature.properties.FromYear <= year && feature.properties.ToYear >= year
+          ))
+        },
+        attribution: "CHGIS Version 6 · Fairbank Center / Fudan University · local research only"
+      });
+      map.addLayer({
+        id: "chgis-fill",
+        type: "fill",
+        source: "chgis-prefectures",
+        filter: activeFilter(year),
+        paint: { "fill-color": "#dca95f", "fill-opacity": 0.2 }
+      });
+      map.addLayer({
+        id: "chgis-line",
+        type: "line",
+        source: "chgis-prefectures",
+        filter: activeFilter(year),
+        paint: { "line-color": "#efc27f", "line-width": 0.8 }
+      });
+    } catch (error) {
+      chgisCollection = null;
+      chgisEnabled = false;
+      elements.chgisToggle.checked = false;
+      console.warn("CHGIS local research data unavailable", error);
+      return;
+    }
+  }
+  if (chgisCollection) {
+    const visibility = chgisEnabled ? "visible" : "none";
+    map.setLayoutProperty("chgis-fill", "visibility", visibility);
+    map.setLayoutProperty("chgis-line", "visibility", visibility);
+    updateChgisFilter();
+  }
+  updateLabels();
+}
+
 function bindControls() {
+  elements.chgisControl.hidden = !["localhost", "127.0.0.1"].includes(window.location.hostname);
+  elements.chgisToggle.addEventListener("change", (event) => setChgisEnabled(event.target.checked));
   elements.baseSelect.addEventListener("change", (event) => setBaseMode(event.target.value));
-  elements.yearSlider.addEventListener("input", (event) => setYear(Number(event.target.value)));
+  elements.yearSlider.addEventListener("input", (event) => {
+    const position = Number(event.target.value);
+    const lower = Math.floor(position);
+    const upper = Math.min(TIMELINE_NODES.length - 1, Math.ceil(position));
+    const fraction = position - lower;
+    const interpolatedYear = TIMELINE_NODES[lower] + (TIMELINE_NODES[upper] - TIMELINE_NODES[lower]) * fraction;
+    setYear(interpolatedYear, position);
+  });
+  elements.yearSlider.addEventListener("change", (event) => {
+    const position = Number(event.target.value);
+    const nearest = Math.round(position);
+    if (Math.abs(position - nearest) <= 0.15) setYear(TIMELINE_NODES[nearest]);
+  });
   elements.yearInput.addEventListener("change", (event) => {
     const value = Number(event.target.value);
     if (Number.isFinite(value)) setYear(value);
@@ -502,33 +631,9 @@ function bindControls() {
       elements.aboutPanel.hidden = true;
     }
   });
-  let draggingTimeline = false;
-  const seekTimeline = (event) => {
-    const rect = elements.timelineTrack.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
-    const index = Math.round(ratio * (TIMELINE_NODES.length - 1));
-    setYear(TIMELINE_NODES[index]);
-  };
-  elements.timelineTrack.addEventListener("pointerdown", (event) => {
-    event.preventDefault();
-    draggingTimeline = true;
-    elements.timelineTrack.setPointerCapture(event.pointerId);
-    seekTimeline(event);
-  });
-  elements.timelineTrack.addEventListener("pointermove", (event) => {
-    if (draggingTimeline) seekTimeline(event);
-  });
-  const stopTimelineDrag = (event) => {
-    draggingTimeline = false;
-    if (elements.timelineTrack.hasPointerCapture(event.pointerId)) {
-      elements.timelineTrack.releasePointerCapture(event.pointerId);
-    }
-  };
-  elements.timelineTrack.addEventListener("pointerup", stopTimelineDrag);
-  elements.timelineTrack.addEventListener("pointercancel", stopTimelineDrag);
 }
 
-function addDataLayers(base, claimLine) {
+function addDataLayers(base, claimLine, disputedAreas) {
   const useDlr = baseMode === "dlr";
   const baseSources = {
     "natural-earth-land": base.land,
@@ -645,6 +750,25 @@ function addDataLayers(base, claimLine) {
       "line-dasharray": [2, 1.5]
     }
   });
+  map.addSource("world-bank-disputes", {
+    type: "geojson",
+    data: disputedAreas,
+    attribution: "World Bank Official Boundaries · CC BY 4.0"
+  });
+  map.addLayer({
+    id: "disputed-fill",
+    type: "fill",
+    source: "world-bank-disputes",
+    layout: { visibility: year === 2024 ? "visible" : "none" },
+    paint: { "fill-color": "#c28bb8", "fill-opacity": 0.3 }
+  });
+  map.addLayer({
+    id: "disputed-line",
+    type: "line",
+    source: "world-bank-disputes",
+    layout: { visibility: year === 2024 ? "visible" : "none" },
+    paint: { "line-color": "#efb6dd", "line-width": 1.6, "line-dasharray": [2, 1] }
+  });
   map.addLayer({
     id: "selected-outline",
     type: "line",
@@ -675,7 +799,7 @@ async function fetchGeoJson(path) {
 async function loadData() {
   try {
     elements.loadingDetail.textContent = "正在加载陆地、海洋、水系、中文名称、政权资料与历史边界…";
-    const [historical, modern, attributes, land, lakes, rivers, coastline, claimLine] = await Promise.all([
+    const [historical, modern, attributes, land, lakes, rivers, coastline, claimLine, disputedAreas] = await Promise.all([
       fetchGeoJson("./data/cliopatria.geojson"),
       fetchGeoJson("./data/modern-2024.geojson?v=20261105-polity-audit"),
       fetchJson("./data/polity-attributes.json"),
@@ -683,13 +807,14 @@ async function loadData() {
       fetchGeoJson("./data/natural-earth/lakes.geojson"),
       fetchGeoJson("./data/natural-earth/rivers_lake_centerlines.geojson"),
       fetchGeoJson("./data/natural-earth/coastline.geojson"),
-      fetchGeoJson("./data/south-china-sea-line.geojson")
+      fetchGeoJson("./data/south-china-sea-line.geojson"),
+      fetchGeoJson("./data/world-bank-disputed.geojson")
     ]);
     collection = historical;
     modernCollection = modern;
     polityAttributes = attributes;
     activeCollection = collection;
-    addDataLayers({ land, lakes, rivers, coastline }, claimLine);
+    addDataLayers({ land, lakes, rivers, coastline }, claimLine, disputedAreas);
   } catch (error) {
     elements.loading.classList.add("is-error");
     elements.loading.querySelector("strong").textContent = "本地数据加载失败";
@@ -729,10 +854,20 @@ function initializeMap() {
   map.on("click", "south-china-sea-line-hit", (event) => {
     if (event.features?.length) showDetail(event.features[0].properties);
   });
+  map.on("click", "disputed-fill", (event) => {
+    if (event.features?.length) showDetail(event.features[0].properties);
+  });
+  map.on("click", "chgis-fill", (event) => {
+    if (event.features?.length) showDetail(event.features[0].properties);
+  });
   map.on("mouseenter", "polity-fill", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "polity-fill", () => { map.getCanvas().style.cursor = ""; });
   map.on("mouseenter", "south-china-sea-line-hit", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "south-china-sea-line-hit", () => { map.getCanvas().style.cursor = ""; });
+  map.on("mouseenter", "disputed-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "disputed-fill", () => { map.getCanvas().style.cursor = ""; });
+  map.on("mouseenter", "chgis-fill", () => { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "chgis-fill", () => { map.getCanvas().style.cursor = ""; });
 }
 
 setBaseMode(baseMode);

@@ -1,0 +1,12 @@
+{
+  "Q423|South Korea": {
+    "target": "Q884",
+    "reason": "Republic of Korea / South Korea is Q884; Q423 is North Korea.",
+    "evidence": "https://en.wikipedia.org/wiki/South_Korea"
+  },
+  "Q28405|Joseon": {
+    "target": "Q28179",
+    "reason": "Joseon is Q28179; Q28405 is Gojoseon.",
+    "evidence": "https://en.wikipedia.org/wiki/Joseon"
+  }
+}

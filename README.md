@@ -55,8 +55,11 @@ http://127.0.0.1:8000/
 | 历史政权几何、年份区间 | [Cliopatria v0.2.1](https://github.com/Seshat-Global-History-Databank/cliopatria/tree/v0.2.1) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | 保留署名、许可链接和修改说明 |
 | 陆地、水系、海岸线及 2024 年参考底稿 | [Natural Earth](https://www.naturalearthdata.com/) | 公共领域 | 保留来源说明，继续审核历史适用性 |
 | DLR 海岸实验数据（可选对照模式） | [DLR TanDEM-X High-Resolution Coastline 2010–2015](https://doi.org/10.15489/entfdgi5es81) | CC BY 4.0 | © DLR 2019-2025；默认底版不变，使用 `?base=dlr` 启用实验对照 |
+| 2024 年现代国家／地区及争议叠加层 | [World Bank Official Boundaries](https://datacatalog.worldbank.org/search/dataset/0038272/world-bank-official-boundaries) | CC BY 4.0 | 保留 World Bank 署名；争议区只叠加，不替换现有边界 |
+| CHGIS 府级本地研究层 | [CHGIS Version 6](https://dataverse.harvard.edu/dataverse/chgis_v6) | 非商业学术／教育使用，禁止未经许可公开再分发 | 仅在本地 `prototype/local/` 使用，不上传或部署完整图层 |
 | 2024 年中国省级边界 | [阿里云 DataV](https://geo.datav.aliyun.com/) | 待核实 | 原始坐标为 GCJ-02；显示副本转换为 WGS 84，未抽稀 |
-| 中文实体名称 | [Wikidata](https://www.wikidata.org/) | [CC0 1.0](https://www.wikidata.org/wiki/Wikidata:Copyright) | 英文原名与实体 ID 同时保留 |
+| 中文名称、政权日期及结构化属性 | [Wikidata](https://www.wikidata.org/) | [CC0 1.0](https://www.wikidata.org/wiki/Wikidata:Copyright) | 英文原名与实体 ID 同时保留，历史属性仍需审校 |
+| 缺失政权字段的备选补充 | [English Wikipedia](https://en.wikipedia.org/) | [CC BY-SA 4.0](https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License) | 仅补 Wikidata 空字段；保存条目链接、修订号和修改来源，不覆盖已有值 |
 | 地图渲染 | [MapLibre GL JS 5.6.0](https://github.com/maplibre/maplibre-gl-js) | BSD-3-Clause | 许可文本位于 `prototype/vendor/maplibre-LICENSE.txt` |
 
 不同来源的代码、几何、文本和图片应分别记录许可。本项目没有将上游整个数据包视为可无条件复用。
@@ -105,10 +108,21 @@ python prototype/scripts/prepare_data.py
 
 ```bash
 python prototype/scripts/fetch_polity_attributes.py
+python prototype/scripts/fetch_wikipedia_infoboxes.py
 python prototype/scripts/prepare_data.py
 ```
 
 原始数据需要分别放置在 `data/raw/cliopatria/`、`data/raw/natural-earth/` 和 `data/raw/wikidata/`；这些原始文件不随仓库分发。
+
+## CHGIS 本地研究层
+
+CHGIS 时间序列府级数据仅用于本地非商业研究。生成文件写入被 Git 忽略的 `prototype/local/`，不会上传或部署：
+
+```bash
+.venv/Scripts/python prototype/scripts/prepare_chgis_local.py
+```
+
+本地页面顶部会出现“CHGIS 府级（本地）”开关。公开 GitHub Pages 不显示该入口。当前接入的是 WGS 84 时间序列府级多边形；1820/1911 的西安 1980 图层尚未接入。
 
 ## 自动部署
 

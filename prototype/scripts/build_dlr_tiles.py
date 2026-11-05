@@ -70,6 +70,8 @@ def main():
     parser.add_argument("--min-zoom", type=int, default=0)
     parser.add_argument("--max-zoom", type=int, default=6)
     parser.add_argument("--tile")
+    parser.add_argument("--x-min", type=int)
+    parser.add_argument("--x-max", type=int)
     args = parser.parse_args()
     to_wgs84 = Transformer.from_crs(3395, 4326, always_xy=True)
     to_world = Transformer.from_crs(4326, 3395, always_xy=True)
@@ -82,6 +84,11 @@ def main():
             tile for z in range(args.min_zoom, args.max_zoom + 1)
             for tile in [mercantile.Tile(x=x, y=y, z=z) for x in range(2 ** z) for y in range(2 ** z)]
         )
+    tiles = (
+        tile for tile in tiles
+        if (args.x_min is None or tile.x >= args.x_min)
+        and (args.x_max is None or tile.x <= args.x_max)
+    )
     total = 0
     for index, tile in enumerate(tiles, 1):
         output = OUTPUT / str(tile.z) / str(tile.x) / f"{tile.y}.pbf"

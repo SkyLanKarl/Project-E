@@ -26,6 +26,8 @@ h1 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 27px; f
 .base-select-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
 #base-select { padding: 7px 9px; border: 1px solid #455449; border-radius: 4px; background: #17211e; color: #e5efdf; cursor: pointer; }
 #base-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.chgis-control { display: flex; align-items: center; gap: 6px; color: #e1bd7c; font-size: 11px; white-space: nowrap; }
+.chgis-control input { accent-color: #e1bd7c; }
 
 .map-stage { position: relative; min-height: 0; overflow: hidden; background: #111c1b; }
 #map { position: absolute; inset: 0; }
@@ -57,10 +59,7 @@ h1 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 27px; f
 .detail-list dt { color: var(--muted); }
 .detail-list dd { margin: 0; text-align: right; }
 .detail-panel { max-height: calc(100% - 48px); overflow: auto; }
-.detail-attributes { border-bottom: 1px solid var(--line); }
-.detail-attributes summary { padding: 14px 0; color: var(--accent); font-size: 12px; cursor: pointer; }
-.detail-attributes summary span { color: var(--muted); font-size: 10px; }
-.detail-attributes .detail-list { border-top: 0; }
+.detail-metadata { margin-top: 18px; }
 .attribute-note { color: var(--muted); font-size: 10px; line-height: 1.6; }
 .detail-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .detail-links a { padding: 7px 10px; border: 1px solid #455449; border-radius: 4px; color: #e5efdf; font-size: 11px; text-decoration: none; }
@@ -87,7 +86,7 @@ h1 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 27px; f
 .timeline-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-50%); background: #53604c; }
 .timeline-track:focus-within::before { background: var(--accent); }
 .year-handle { position: absolute; left: 0; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(216,240,143,0.12); transform: translate(-50%, -50%); pointer-events: none; }
-.year-slider { position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; opacity: 0; pointer-events: none; }
+.year-slider { position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; opacity: 0; cursor: pointer; z-index: 2; }
 .era-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; min-height: 40px; padding-top: 6px; }
 .era-buttons button { min-width: 96px; min-height: 32px; padding: 7px 18px; border: 1px solid #39473f; border-radius: 5px; background: #17211e; color: #aebbb0; font-size: 12px; cursor: pointer; }
 .era-buttons button:hover, .era-buttons button.is-active { border-color: var(--accent); color: var(--accent); background: #28342a; }

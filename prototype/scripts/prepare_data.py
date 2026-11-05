@@ -1,7 +1,10 @@
 import hashlib
 import json
+import re
 import shutil
 from pathlib import Path
+
+from entity_identity import correct_qid, load_qid_overrides
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "data/raw/cliopatria/cliopatria_polities_only_v021.geojson"
@@ -97,11 +100,40 @@ def load_json(path):
         return json.load(source_file)
 
 
+def merge_wikipedia_dates(polity_dates, wikipedia):
+    merged = json.loads(json.dumps(polity_dates))
+    for qid, entity in wikipedia.items():
+        fields = entity.get("infobox", {})
+        if not fields:
+            continue
+        target = merged.setdefault(qid, {"start": None, "end": None})
+        lifespan = re.findall(r"\d{1,4}", fields.get("life_span", ""))
+        start_year = wikipedia_year(fields.get("year_start")) or (int(lifespan[0]) if lifespan else None)
+        end_year = (wikipedia_year(fields.get("year_end")) or (int(lifespan[1]) if len(lifespan) > 1 else None)) if fields.get("year_start") or lifespan else None
+        for key, year in (("start", start_year), ("end", end_year)):
+            if target.get(key) or year is None:
+                continue
+            target[key] = {
+                "date": f"{year:+d}-00-00T00:00:00Z",
+                "year": year,
+                "precision": 9,
+                "candidateYears": [year],
+                "source": "Wikipedia",
+                "sourceUrl": entity.get("url"),
+                "revisionId": entity.get("revisionId"),
+                "license": "CC BY-SA 4.0",
+            }
+    return merged
+
+
 def polity_date_properties(qid, polity_dates):
     entity = polity_dates.get(qid, {})
     start = entity.get("start") or {}
     end = entity.get("end") or {}
     has_dates = bool(start or end)
+    sources = list(dict.fromkeys(
+        value.get("source", "Wikidata") for value in (start, end) if value
+    ))
     return {
         "PolityFromYear": start.get("year"),
         "PolityToYear": end.get("year"),
@@ -109,7 +141,7 @@ def polity_date_properties(qid, polity_dates):
         "PolityToDate": end.get("date"),
         "PolityFromPrecision": start.get("precision"),
         "PolityToPrecision": end.get("precision"),
-        "PolityDateSource": "Wikidata" if has_dates else "",
+        "PolityDateSource": " / ".join(sources),
         "PolityDateReview": "pending" if has_dates else "missing",
         "PolityDateMultiple": bool(
             len(start.get("candidateYears", [])) > 1 or len(end.get("candidateYears", [])) > 1
@@ -117,10 +149,10 @@ def polity_date_properties(qid, polity_dates):
     }
 
 
-def prepare_feature(feature, index, labels, overrides, polity_dates):
+def prepare_feature(feature, index, labels, overrides, polity_dates, qid_overrides):
     properties = feature["properties"]
     name = properties["Name"]
-    qid = properties.get("Wikidata") or ""
+    qid = correct_qid(properties, qid_overrides)
     name_zh = overrides.get(name) or labels.get(qid, {}).get("zh") or name
     role = "composite" if properties.get("Components") else "member" if properties.get("MemberOf") else "polity"
     return {
@@ -195,16 +227,27 @@ def convert_geometry_coordinates(value):
 
 
 def prepare_modern_data(polity_dates):
-    source = load_json(ROOT / "data/raw/natural-earth/geojson/ne_50m_admin_0_countries.geojson")
+    natural_earth = load_json(ROOT / "data/raw/natural-earth/geojson/ne_50m_admin_0_countries.geojson")
+    world_bank = load_json(ROOT / "data/raw/world-bank-boundaries/WB_Boundaries_GeoJSON_highres/WB_countries_Admin0.geojson")
+    natural_qids = {
+        feature["properties"].get("NAME_EN"): feature["properties"].get("WIKIDATAID") or ""
+        for feature in natural_earth["features"]
+    }
+    source_entries = [("World Bank", feature) for feature in world_bank["features"]]
+    source_entries.extend(
+        ("Natural Earth", feature) for feature in natural_earth["features"]
+        if feature["properties"].get("NAME_EN") == "Taiwan"
+    )
     features = []
-    for feature in source["features"]:
+    for source_name, feature in source_entries:
         properties = feature["properties"]
         name = properties.get("NAME_EN") or properties["NAME"]
-        if name == "People's Republic of China" or properties.get("WIKIDATAID") in {"Q148", "Q8646", "Q14773", "Q333946", "Q51"}:
+        if name in {"People's Republic of China", "Hong Kong", "Macau", "Siachen Glacier", "Antarctica"} or properties.get("WIKIDATAID") in {"Q148", "Q8646", "Q14773", "Q333946", "Q51"}:
             continue
         sovereignty = properties.get("SOVEREIGNT") or name
         is_member = properties.get("TYPE") not in {"Sovereign country", "Country"} and sovereignty != name
         feature_id = len(features)
+        qid = properties.get("WIKIDATAID") or natural_qids.get(name, "")
         features.append({
             "type": "Feature",
             "id": feature_id,
@@ -212,13 +255,13 @@ def prepare_modern_data(polity_dates):
                 "id": feature_id,
                 "Name": name,
                 "NameZh": properties.get("NAME_ZH") or name,
-                "NameReview": "natural-earth",
+                "NameReview": "world-bank" if source_name == "World Bank" else "natural-earth",
                 "FromYear": 2024,
                 "ToYear": 2024,
                 "Area": 0,
                 "Wikipedia": name,
-                "Wikidata": properties.get("WIKIDATAID") or "",
-                **polity_date_properties(properties.get("WIKIDATAID") or "", polity_dates),
+                "Wikidata": qid,
+                **polity_date_properties(qid, polity_dates),
                 "MemberOf": f"({sovereignty})" if is_member else "",
                 "Components": "",
                 "role": "member" if is_member else "polity",
@@ -228,7 +271,7 @@ def prepare_modern_data(polity_dates):
                 "ReviewStatus": "pending",
                 "Type": properties.get("TYPE") or "",
                 "Sovereignty": sovereignty,
-                "Source": "Natural Earth",
+                "Source": source_name,
                 "LabelPoint": label_point(feature["geometry"]),
                 "LabelPriority": properties.get("POP_EST") or 0,
                 "color": color_index(name),
@@ -292,24 +335,184 @@ def prepare_modern_data(polity_dates):
     print(f"Wrote {len(features)} pending-review modern features to {output}")
 
 
+def wikipedia_claim(entity, key, value, qualifiers=None):
+    return {
+        "id": f"wikipedia:{entity.get('revisionId')}:{key}",
+        "rank": "normal",
+        "value": value,
+        "qualifiers": qualifiers or {},
+        "referenceUrls": [entity["url"]] if entity.get("url") else [],
+        "source": "Wikipedia",
+        "sourceUrl": entity.get("url"),
+        "revisionId": entity.get("revisionId"),
+        "license": "CC BY-SA 4.0",
+    }
+
+
+def wikipedia_year(value):
+    match = re.search(r"\d{1,4}", value or "")
+    if not match:
+        return None
+    year = int(match.group(0))
+    return -year if re.search(r"\b(?:BC|BCE)\b", value, re.I) else year
+
+
+def wikipedia_time_qualifier(year):
+    if year is None:
+        return {}
+    return {"P585": [{"date": f"{year:+d}-00-00T00:00:00Z", "precision": 9}]}
+
+
+def wikipedia_quantity(entity, keys, year_keys, unit):
+    fields = entity.get("infobox", {})
+    for key in keys:
+        value = fields.get(key, "")
+        match = re.search(r"-?\d[\d, ]*(?:\.\d+)?", value)
+        if not match:
+            continue
+        raw = match.group(0).replace(",", "").replace(" ", "")
+        try:
+            amount = float(raw)
+        except ValueError:
+            continue
+        year = next((wikipedia_year(fields.get(y)) for y in year_keys if fields.get(y)), None)
+        return wikipedia_claim(entity, key, {
+            "amount": int(amount) if amount.is_integer() else amount,
+            "rawAmount": raw,
+            "unit": unit,
+        }, wikipedia_time_qualifier(year))
+    return None
+
+
+def merge_wikipedia_attributes(source, wikipedia):
+    entities = json.loads(json.dumps(source.get("entities", {})))
+    field_keys = {
+        "capital": ["capital"],
+        "officialLanguage": ["official_languages"],
+        "religion": ["religion"],
+        "currency": ["currency"],
+        "governmentForm": ["government_type"],
+        "headOfState": ["leader1", "leader_name1"],
+        "headOfGovernment": ["deputy1"],
+        "entityType": ["status"],
+        "memberOf": ["membership"],
+    }
+    added = 0
+    for qid, entity in wikipedia.items():
+        if not entity.get("infobox"):
+            continue
+        target = entities.setdefault(qid, {name: [] for name in source.get("properties", {})})
+        for field, keys in field_keys.items():
+            if target.get(field):
+                continue
+            for key in keys:
+                value = entity["infobox"].get(key)
+                if not value:
+                    continue
+                qualifiers = {}
+                year_key = {"leader1": "year_leader1", "deputy1": "year_deputy1"}.get(key)
+                years = re.findall(r"\d{3,4}", entity["infobox"].get(year_key, "")) if year_key else []
+                if years:
+                    qualifiers["P580"] = [{"date": f"{int(years[0]):+d}-00-00T00:00:00Z", "precision": 9}]
+                if len(years) > 1:
+                    qualifiers["P582"] = [{"date": f"{int(years[1]):+d}-00-00T00:00:00Z", "precision": 9}]
+                target[field] = [wikipedia_claim(entity, key, {"text": value}, qualifiers)]
+                added += 1
+                break
+        for field, prefix in (("predecessor", "p"), ("successor", "s")):
+            if target.get(field):
+                continue
+            claims = [
+                wikipedia_claim(entity, key, {"text": value})
+                for key, value in entity["infobox"].items()
+                if re.fullmatch(rf"{prefix}\d+", key) and value
+            ]
+            if claims:
+                target[field] = claims
+                added += 1
+        if not target.get("population"):
+            claim = wikipedia_quantity(
+                entity,
+                ["population_estimate", "population_census", "stat_pop1"],
+                ["population_estimate_year", "population_census_year", "stat_year1"],
+                "1",
+            )
+            if claim:
+                target["population"] = [claim]
+                added += 1
+        if not target.get("area"):
+            claim = wikipedia_quantity(
+                entity,
+                ["area_km2", "stat_area1"],
+                ["stat_year1"],
+                "http://www.wikidata.org/entity/Q712226",
+            )
+            if claim:
+                target["area"] = [claim]
+                added += 1
+    return entities, added
+
+
 def prepare_polity_attributes():
     source_path = ROOT / "data/raw/wikidata/polity-attributes.json"
     source = load_json(source_path) if source_path.exists() else {}
+    wikipedia_path = ROOT / "data/raw/wikipedia/polity-infoboxes.json"
+    wikipedia = load_json(wikipedia_path)["entities"] if wikipedia_path.exists() else {}
+    entities, added = merge_wikipedia_attributes(source, wikipedia)
     output = OUTPUT_DIR / "polity-attributes.json"
     with output.open("w", encoding="utf-8", newline="\n") as output_file:
         json.dump({
-            "source": "Wikidata",
-            "sourceUrl": "https://www.wikidata.org/",
-            "license": "CC0 1.0",
-            "licenseUrl": "https://www.wikidata.org/wiki/Wikidata:Copyright",
+            "source": "Wikidata with Wikipedia missing-field fallback",
+            "sourceUrl": "https://www.wikidata.org/ and https://en.wikipedia.org/",
+            "license": "Wikidata CC0 1.0; Wikipedia CC BY-SA 4.0",
+            "licenseUrl": "https://www.wikidata.org/wiki/Wikidata:Copyright and https://en.wikipedia.org/wiki/Wikipedia:Text_of_the_Creative_Commons_Attribution-ShareAlike_4.0_International_License",
             "reviewStatus": "pending",
             "properties": source.get("properties", {}),
             "relatedProperties": source.get("relatedProperties", {}),
-            "entities": source.get("entities", {}),
+            "entities": entities,
             "relatedEntities": source.get("relatedEntities", {}),
             "labels": source.get("labels", {}),
         }, output_file, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
-    print(f"Wrote {len(source.get('entities', {}))} attributed entities to {output}")
+    print(f"Added {added} Wikipedia fallback fields; wrote {len(entities)} attributed entities to {output}")
+
+
+def prepare_world_bank_disputed():
+    source = load_json(ROOT / "data/raw/world-bank-boundaries/WB_Boundaries_GeoJSON_highres/WB_Admin0_disputed_areas.geojson")
+    features = []
+    for index, feature in enumerate(source["features"]):
+        properties = feature["properties"]
+        name = (properties.get("NAME_EN") or "").strip() or "Unnamed disputed area"
+        name_zh = (properties.get("NAME_ZH") or "").strip() or "未命名争议区域"
+        features.append({
+            "type": "Feature",
+            "id": -index - 2,
+            "properties": {
+                "id": -index - 2,
+                "Name": name,
+                "NameZh": name_zh,
+                "NameReview": "world-bank",
+                "FromYear": 2024,
+                "ToYear": 2024,
+                "Area": 0,
+                "Wikipedia": name,
+                "Wikidata": (properties.get("WIKIDATAID") or "").strip(),
+                "MemberOf": "",
+                "Components": "",
+                "role": "disputed",
+                "GeometryStatus": "disputed",
+                "ReviewStatus": "source",
+                "Source": "World Bank",
+                "WbRules": properties.get("WB_RULES") or "",
+            },
+            "geometry": {
+                "type": feature["geometry"]["type"],
+                "coordinates": round_coordinates(feature["geometry"]["coordinates"]),
+            },
+        })
+    output = OUTPUT_DIR / "world-bank-disputed.geojson"
+    with output.open("w", encoding="utf-8", newline="\n") as output_file:
+        json.dump({"type": "FeatureCollection", "features": features}, output_file, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    print(f"Wrote {len(features)} World Bank disputed areas to {output}")
 
 
 def main():
@@ -317,9 +520,13 @@ def main():
     labels = load_json(ROOT / "data/raw/wikidata/labels-zh.json")["entities"]
     dates_path = ROOT / "data/raw/wikidata/polity-dates.json"
     polity_dates = load_json(dates_path)["entities"] if dates_path.exists() else {}
+    wikipedia_path = ROOT / "data/raw/wikipedia/polity-infoboxes.json"
+    wikipedia = load_json(wikipedia_path)["entities"] if wikipedia_path.exists() else {}
+    polity_dates = merge_wikipedia_dates(polity_dates, wikipedia)
     overrides = load_json(ROOT / "prototype/config/name-overrides.json")
+    qid_overrides = load_qid_overrides()
     features = [
-        prepare_feature(feature, index, labels, overrides, polity_dates)
+        prepare_feature(feature, index, labels, overrides, polity_dates, qid_overrides)
         for index, feature in enumerate(source["features"])
     ]
     mexico_1912 = next(
@@ -350,6 +557,7 @@ def main():
     print(f"Wrote {len(features)} features to {OUTPUT} ({OUTPUT.stat().st_size / 1024 / 1024:.1f} MiB)")
     prepare_base_data()
     prepare_modern_data(polity_dates)
+    prepare_world_bank_disputed()
     prepare_polity_attributes()
 
 
