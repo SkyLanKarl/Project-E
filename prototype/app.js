@@ -410,7 +410,7 @@ async function loadData() {
     elements.loadingDetail.textContent = "正在加载陆地、海洋、水系、中文名称与历史边界…";
     const [historical, modern, land, lakes, rivers, coastline, claimLine] = await Promise.all([
       fetchGeoJson("./data/cliopatria.geojson"),
-      fetchGeoJson("./data/modern-2024.geojson"),
+      fetchGeoJson("./data/modern-2024.geojson?v=20261105-polity-audit"),
       fetchGeoJson("./data/natural-earth/land.geojson"),
       fetchGeoJson("./data/natural-earth/lakes.geojson"),
       fetchGeoJson("./data/natural-earth/rivers_lake_centerlines.geojson"),

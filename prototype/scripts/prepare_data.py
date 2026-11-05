@@ -179,7 +179,7 @@ def prepare_modern_data():
     for feature in source["features"]:
         properties = feature["properties"]
         name = properties.get("NAME_EN") or properties["NAME"]
-        if name == "People's Republic of China" or properties.get("WIKIDATAID") in {"Q148", "Q8646", "Q14773"}:
+        if name == "People's Republic of China" or properties.get("WIKIDATAID") in {"Q148", "Q8646", "Q14773", "Q333946", "Q51"}:
             continue
         sovereignty = properties.get("SOVEREIGNT") or name
         is_member = properties.get("TYPE") not in {"Sovereign country", "Country"} and sovereignty != name
