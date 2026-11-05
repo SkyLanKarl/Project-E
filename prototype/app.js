@@ -91,14 +91,18 @@ function showDetail(properties) {
   elements.detailArea.textContent = properties.Area > 0
     ? `${Math.round(properties.Area).toLocaleString("zh-CN")} km²`
     : "未提供";
-  if (properties.GeometryStatus === "carry-forward") {
+  if (properties.GeometryStatus === "claim") {
+    elements.detailGeometryStatus.textContent = "主张边界 · 起始年及线段版本待核";
+  } else if (properties.GeometryStatus === "carry-forward") {
     elements.detailGeometryStatus.textContent = `推断延续 · 源几何为 ${formatYear(properties.SourceFromYear)}`;
   } else if (properties.GeometryStatus === "reference") {
     elements.detailGeometryStatus.textContent = "现代参考几何 · 待人工审定";
   } else {
     elements.detailGeometryStatus.textContent = "来源原始几何 · 未按现代岸线裁切";
   }
-  if (properties.Components) {
+  if (properties.role === "claim") {
+    elements.detailRelation.textContent = "非政治实体 · 不作为法定国界";
+  } else if (properties.Components) {
     const members = properties.Components.split(";").map(localizedName).join("、");
     elements.detailRelation.textContent = `复合政治实体 · 成员：${members}`;
   } else if (properties.MemberOf) {
@@ -113,9 +117,11 @@ function showDetail(properties) {
     pending: "待翻译"
   };
   elements.detailNameReview.textContent = nameReviewLabels[properties.NameReview] || "待审校";
-  elements.detailSource.textContent = year === 2024
-    ? "2024 底稿：Natural Earth 50m · 公共领域 · 待人工审定；保留来源的主权国与地区分类，不代表本项目立场。"
-    : "几何来源：Cliopatria v0.2.1 · CC BY 4.0；几何有效期不等于政权建立与灭亡时间。";
+  elements.detailSource.textContent = properties.Source === "user-provided"
+    ? "来源：用户提供的十段线 GeoJSON · 几何来源、坐标系与版本待核；1953 年起始显示为当前项目设定，不是该几何自带的史料结论。"
+    : year === 2024
+      ? "2024 底稿：Natural Earth 50m · 公共领域 · 待人工审定；保留来源的主权国与地区分类，不代表本项目立场。"
+      : "几何来源：Cliopatria v0.2.1 · CC BY 4.0；几何有效期不等于政权建立与灭亡时间。";
   elements.detailLinks.replaceChildren();
   if (properties.Wikipedia) {
     const article = encodeURIComponent(properties.Wikipedia.replaceAll(" ", "_"));
@@ -197,6 +203,8 @@ function setYear(nextYear) {
     map.getSource("cliopatria").setData({ type: "FeatureCollection", features: activeFeatures });
     map.setFilter("polity-fill", activeFilter(year));
     map.setFilter("polity-line", activeFilter(year));
+    map.setLayoutProperty("south-china-sea-line", "visibility", year >= 1953 ? "visible" : "none");
+    map.setLayoutProperty("south-china-sea-line-hit", "visibility", year >= 1953 ? "visible" : "none");
     if (selectedId !== null) {
       const selected = activeCollection.features[selectedId];
       if (!selected || selected.properties.FromYear > year || selected.properties.ToYear < year) closeDetail();
@@ -274,7 +282,7 @@ function bindControls() {
   });
 }
 
-function addDataLayers(base) {
+function addDataLayers(base, claimLine) {
   const baseSources = {
     "natural-earth-land": base.land,
     "natural-earth-lakes": base.lakes,
@@ -341,6 +349,30 @@ function addDataLayers(base) {
     filter: activeFilter(year),
     paint: { "line-color": "rgba(235, 241, 220, 0.62)", "line-width": 0.55 }
   });
+  map.addSource("south-china-sea-claim", {
+    type: "geojson",
+    data: claimLine,
+    attribution: "User-provided South China Sea line · review pending"
+  });
+  map.addLayer({
+    id: "south-china-sea-line-hit",
+    type: "line",
+    source: "south-china-sea-claim",
+    layout: { visibility: year >= 1953 ? "visible" : "none" },
+    paint: { "line-color": "#f3ca70", "line-width": 16, "line-opacity": 0 }
+  });
+  map.addLayer({
+    id: "south-china-sea-line",
+    type: "line",
+    source: "south-china-sea-claim",
+    layout: { visibility: year >= 1953 ? "visible" : "none" },
+    paint: {
+      "line-color": "#f3ca70",
+      "line-width": 2.2,
+      "line-opacity": 0.9,
+      "line-dasharray": [2, 1.5]
+    }
+  });
   map.addLayer({
     id: "selected-outline",
     type: "line",
@@ -357,8 +389,9 @@ async function fetchGeoJson(path) {
   const response = await fetch(path);
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
   const data = await response.json();
+  if (data.type === "Feature") return { type: "FeatureCollection", features: [data] };
   if (data.type !== "FeatureCollection" || !Array.isArray(data.features)) {
-    throw new Error(`${path} 不是有效的 FeatureCollection`);
+    throw new Error(`${path} 不是有效的 GeoJSON Feature 或 FeatureCollection`);
   }
   return data;
 }
@@ -366,18 +399,19 @@ async function fetchGeoJson(path) {
 async function loadData() {
   try {
     elements.loadingDetail.textContent = "正在加载陆地、海洋、水系、中文名称与历史边界…";
-    const [historical, modern, land, lakes, rivers, coastline] = await Promise.all([
+    const [historical, modern, land, lakes, rivers, coastline, claimLine] = await Promise.all([
       fetchGeoJson("./data/cliopatria.geojson"),
       fetchGeoJson("./data/modern-2024.geojson"),
       fetchGeoJson("./data/natural-earth/land.geojson"),
       fetchGeoJson("./data/natural-earth/lakes.geojson"),
       fetchGeoJson("./data/natural-earth/rivers_lake_centerlines.geojson"),
-      fetchGeoJson("./data/natural-earth/coastline.geojson")
+      fetchGeoJson("./data/natural-earth/coastline.geojson"),
+      fetchGeoJson("./data/south-china-sea-line.geojson")
     ]);
     collection = historical;
     modernCollection = modern;
     activeCollection = collection;
-    addDataLayers({ land, lakes, rivers, coastline });
+    addDataLayers({ land, lakes, rivers, coastline }, claimLine);
   } catch (error) {
     elements.loading.classList.add("is-error");
     elements.loading.querySelector("strong").textContent = "本地数据加载失败";
@@ -413,8 +447,13 @@ function initializeMap() {
       || event.features?.[0];
     if (feature) showDetail(feature.properties);
   });
+  map.on("click", "south-china-sea-line-hit", (event) => {
+    if (event.features?.length) showDetail(event.features[0].properties);
+  });
   map.on("mouseenter", "polity-fill", () => { map.getCanvas().style.cursor = "pointer"; });
   map.on("mouseleave", "polity-fill", () => { map.getCanvas().style.cursor = ""; });
+  map.on("mouseenter", "south-china-sea-line-hit", () => { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "south-china-sea-line-hit", () => { map.getCanvas().style.cursor = ""; });
 }
 
 bindControls();
