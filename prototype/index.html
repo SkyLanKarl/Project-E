@@ -6,7 +6,7 @@
   <title>Project E · 历史边界雏形</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="./vendor/maplibre-gl.css">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=20261105-era-buttons-large">
 </head>
 <body>
   <div class="app-shell">
@@ -16,6 +16,12 @@
         <h1>历史边界</h1>
       </div>
       <div class="topbar-actions">
+        <label class="base-select-label" for="base-select">底版
+          <select id="base-select">
+            <option value="natural-earth">Natural Earth</option>
+            <option value="dlr">DLR 高精度（实验）</option>
+          </select>
+        </label>
         <span class="scope-badge">政权快照 · 非战线</span>
         <button id="about-button" class="text-button" type="button">关于</button>
       </div>
@@ -41,8 +47,33 @@
           <div><dt>几何状态</dt><dd id="detail-geometry-status"></dd></div>
           <div><dt>政治关系</dt><dd id="detail-relation"></dd></div>
           <div><dt>中文译名</dt><dd id="detail-name-review"></dd></div>
-          <div><dt>日期精度</dt><dd>年度区间；非政权存续期</dd></div>
+          <div><dt>日期精度</dt><dd>几何按年度记录；政权日期独立审核</dd></div>
         </dl>
+        <details id="detail-attributes" class="detail-attributes" hidden>
+          <summary>政权资料 <span id="attribute-count"></span></summary>
+          <dl class="detail-list">
+            <div><dt>首都</dt><dd id="attribute-capital"></dd></div>
+            <div><dt>首都坐标</dt><dd id="attribute-capitalCoordinates"></dd></div>
+            <div><dt>人口</dt><dd id="attribute-population"></dd></div>
+            <div><dt>面积</dt><dd id="attribute-area"></dd></div>
+            <div><dt>官方语言</dt><dd id="attribute-officialLanguage"></dd></div>
+            <div><dt>宗教</dt><dd id="attribute-religion"></dd></div>
+            <div><dt>货币</dt><dd id="attribute-currency"></dd></div>
+            <div><dt>政治体制</dt><dd id="attribute-governmentForm"></dd></div>
+            <div><dt>国家元首</dt><dd id="attribute-headOfState"></dd></div>
+            <div><dt>政府首脑</dt><dd id="attribute-headOfGovernment"></dd></div>
+            <div><dt>人物职务</dt><dd id="attribute-positionsHeld"></dd></div>
+            <div><dt>前身</dt><dd id="attribute-predecessor"></dd></div>
+            <div><dt>继承者</dt><dd id="attribute-successor"></dd></div>
+            <div><dt>实体类型</dt><dd id="attribute-entityType"></dd></div>
+            <div><dt>属于</dt><dd id="attribute-partOf"></dd></div>
+            <div><dt>组成成员</dt><dd id="attribute-hasParts"></dd></div>
+            <div><dt>下辖行政区</dt><dd id="attribute-administrativeDivisions"></dd></div>
+            <div><dt>外交关系</dt><dd id="attribute-diplomaticRelations"></dd></div>
+            <div><dt>成员身份</dt><dd id="attribute-memberOf"></dd></div>
+          </dl>
+          <p class="attribute-note">按当前年份筛选；无时间限定的记录会明确标注。人口和面积显示距当前年份最近的记录，不代表当前年份实测值。坐标格式为纬度、经度。</p>
+        </details>
         <div id="detail-links" class="detail-links"></div>
         <p id="detail-source" class="source-note"></p>
       </aside>
@@ -56,6 +87,7 @@
         <p>中文名来自 Wikidata 或本地待审校译名表，英文原名始终保留。底层陆地、海岸线、河流和湖泊均来自 Natural Earth；所有地图数据均在本地。</p>
         <a href="https://github.com/Seshat-Global-History-Databank/cliopatria" target="_blank" rel="noreferrer">Cliopatria 上游项目 ↗</a>
         <a href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noreferrer">Natural Earth · 公共领域 ↗</a>
+        <a href="?base=dlr">启用 DLR 海岸精度对照（实验） ↗</a>
         <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">Cliopatria 数据许可 CC BY 4.0 ↗</a>
       </aside>
 
@@ -84,21 +116,42 @@
         <span id="step-label" class="step-label">现代时期每次前进 1 年</span>
       </div>
 
-      <input id="year-slider" class="year-slider" type="range" min="-3400" max="2024" step="1" value="1800" aria-label="选择历史年份">
-      <div class="range-labels"><span>公元前 3400 年</span><span>公元 2024 年</span></div>
-      <nav class="quick-years" aria-label="常用年份">
+      <div class="timeline-track">
+        <div id="year-handle" class="year-handle" aria-hidden="true"></div>
+        <input id="year-slider" class="year-slider" type="range" min="0" max="17" step="1" value="13" aria-label="按时间节点选择历史年份">
+      </div>
+      <nav class="quick-years" aria-label="历史年份快捷按钮">
+        <button type="button" data-year="-3400">前3400</button>
+        <button type="button" data-year="-3000">前3000</button>
+        <button type="button" data-year="-2000">前2000</button>
         <button type="button" data-year="-1000">前1000</button>
+        <button type="button" data-year="-500">前500</button>
+        <button type="button" data-year="0">0年</button>
+        <button type="button" data-year="250">250</button>
         <button type="button" data-year="500">500</button>
+        <button type="button" data-year="750">750</button>
         <button type="button" data-year="1000">1000</button>
+        <button type="button" data-year="1250">1250</button>
         <button type="button" data-year="1500">1500</button>
+        <button type="button" data-year="1650">1650</button>
         <button type="button" data-year="1800">1800</button>
         <button type="button" data-year="1914">1914</button>
+        <button type="button" data-year="1950">1950</button>
+        <button type="button" data-year="2000">2000</button>
         <button type="button" data-year="2024">2024</button>
+      </nav>
+      <nav class="era-buttons" aria-label="时代快捷按钮">
+        <button type="button" data-era="远古文明" data-era-year="-3000">远古文明</button>
+        <button type="button" data-era="古典时代" data-era-year="0">古典时代</button>
+        <button type="button" data-era="中世纪" data-era-year="1000">中世纪</button>
+        <button type="button" data-era="近代早期" data-era-year="1650">近代早期</button>
+        <button type="button" data-era="近代" data-era-year="1800">近代</button>
+        <button type="button" data-era="现代" data-era-year="2024">现代</button>
       </nav>
     </footer>
   </div>
 
   <script src="./vendor/maplibre-gl.js"></script>
-  <script type="module" src="./app.js?v=20261105-infinite-map"></script>
+  <script type="module" src="./app.js?v=20261105-timeline-drag"></script>
 </body>
 </html>

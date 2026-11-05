@@ -23,7 +23,7 @@
 
 ## 研究口径与限制
 
-- **几何版本有效期不等于政权存续期。**详情中的年份只说明该条几何记录的适用区间。
+- **几何版本有效期不等于政权存续期。**详情以来源区记录几何年份；政权存续时间取自 Wikidata 的建立时间（P571）和解散/废止时间（P576），与几何字段分开保存，仍需人工审校。缺失时标为待核实，只有建立日期时不推断为“至今”；存在多个候选日期时明确提示。
 - **不强行统一岸线。**Cliopatria 与 Natural Earth 的岸线可能不一致；历史层保留原始几何，不为了视觉效果按现代岸线裁切。
 - **不把政治实体记录数当作独立国家数。**复合政体、成员政体、殖民地和其他政治实体需要分别解释。
 - **不自动填补历史缺口。**当前仅墨西哥 1913—1919 年应用了明确的延续案例，并在地图和详情中标注为推断。
@@ -53,7 +53,8 @@ http://127.0.0.1:8000/
 | 内容 | 来源 | 许可 | 使用说明 |
 |---|---|---|---|
 | 历史政权几何、年份区间 | [Cliopatria v0.2.1](https://github.com/Seshat-Global-History-Databank/cliopatria/tree/v0.2.1) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | 保留署名、许可链接和修改说明 |
-| 陆地、水系、海岸线及 2024 年底稿 | [Natural Earth](https://www.naturalearthdata.com/) | 公共领域 | 保留来源说明，继续审核历史适用性 |
+| 陆地、水系、海岸线及 2024 年参考底稿 | [Natural Earth](https://www.naturalearthdata.com/) | 公共领域 | 保留来源说明，继续审核历史适用性 |
+| DLR 海岸实验数据（可选对照模式） | [DLR TanDEM-X High-Resolution Coastline 2010–2015](https://doi.org/10.15489/entfdgi5es81) | CC BY 4.0 | © DLR 2019-2025；默认底版不变，使用 `?base=dlr` 启用实验对照 |
 | 2024 年中国省级边界 | [阿里云 DataV](https://geo.datav.aliyun.com/) | 待核实 | 原始坐标为 GCJ-02；显示副本转换为 WGS 84，未抽稀 |
 | 中文实体名称 | [Wikidata](https://www.wikidata.org/) | [CC0 1.0](https://www.wikidata.org/wiki/Wikidata:Copyright) | 英文原名与实体 ID 同时保留 |
 | 地图渲染 | [MapLibre GL JS 5.6.0](https://github.com/maplibre/maplibre-gl-js) | BSD-3-Clause | 许可文本位于 `prototype/vendor/maplibre-LICENSE.txt` |
@@ -72,6 +73,8 @@ http://127.0.0.1:8000/
 │   ├── config/name-overrides.json   # 本地中文译名覆盖表
 │   ├── scripts/
 │   │   ├── fetch_labels.py          # 分批获取 Wikidata 中文标签
+│   │   ├── fetch_polity_dates.py    # 分批获取 Wikidata 政权起止日期
+│   │   ├── fetch_polity_attributes.py # 下载首都、人口及其他政权属性
 │   │   └── prepare_data.py          # 生成网站使用的精简数据
 │   ├── data/                        # 可直接部署的处理后数据与许可
 │   └── vendor/                      # 本地 MapLibre 及许可
@@ -89,11 +92,19 @@ http://127.0.0.1:8000/
 python prototype/scripts/prepare_data.py
 ```
 
-如需重新获取 Wikidata 中文标签，先安装 `requests`，再运行：
+如需重新获取 Wikidata 中文标签和政权起止日期，先安装 `requests`，再运行：
 
 ```bash
 python -m pip install requests
 python prototype/scripts/fetch_labels.py
+python prototype/scripts/fetch_polity_dates.py
+python prototype/scripts/prepare_data.py
+```
+
+首都及坐标、人口、面积、官方语言、宗教、货币、政治体制、国家元首、政府首脑、人物任职、前身、继承者、实体类型、组成、行政区划、外交关系和成员身份可获取并接入网站详情的“政权资料”区域。详情按当前年份筛选带时间限定的记录，无时间限定的记录会明确标注；人口和面积显示距当前年份最近的记录及其年份：
+
+```bash
+python prototype/scripts/fetch_polity_attributes.py
 python prototype/scripts/prepare_data.py
 ```
 

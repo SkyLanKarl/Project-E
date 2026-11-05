@@ -1,0 +1,13 @@
+TanDEM-X High-Resolution Coastline - Global, 10m
+Publisher: German Aerospace Center (DLR)
+Dataset: https://doi.org/10.15489/entfdgi5es81
+
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+Recommended attribution:
+© DLR 2019-2025. German Aerospace Center (DLR): TanDEM-X High-Resolution Coastline - Global, 10m, https://doi.org/10.15489/entfdgi5es81, CC BY 4.0
+
+When sharing the data or adaptations, provide attribution, link to the license,
+and indicate if changes were made. No additional restrictions may be applied
+that prevent recipients from exercising the rights granted by CC BY 4.0.

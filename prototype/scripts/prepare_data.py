@@ -97,7 +97,27 @@ def load_json(path):
         return json.load(source_file)
 
 
-def prepare_feature(feature, index, labels, overrides):
+def polity_date_properties(qid, polity_dates):
+    entity = polity_dates.get(qid, {})
+    start = entity.get("start") or {}
+    end = entity.get("end") or {}
+    has_dates = bool(start or end)
+    return {
+        "PolityFromYear": start.get("year"),
+        "PolityToYear": end.get("year"),
+        "PolityFromDate": start.get("date"),
+        "PolityToDate": end.get("date"),
+        "PolityFromPrecision": start.get("precision"),
+        "PolityToPrecision": end.get("precision"),
+        "PolityDateSource": "Wikidata" if has_dates else "",
+        "PolityDateReview": "pending" if has_dates else "missing",
+        "PolityDateMultiple": bool(
+            len(start.get("candidateYears", [])) > 1 or len(end.get("candidateYears", [])) > 1
+        ),
+    }
+
+
+def prepare_feature(feature, index, labels, overrides, polity_dates):
     properties = feature["properties"]
     name = properties["Name"]
     qid = properties.get("Wikidata") or ""
@@ -116,6 +136,7 @@ def prepare_feature(feature, index, labels, overrides):
             "Area": round(properties.get("Area") or 0, 1),
             "Wikipedia": properties.get("Wikipedia") or "",
             "Wikidata": qid,
+            **polity_date_properties(qid, polity_dates),
             "MemberOf": properties.get("MemberOf") or "",
             "Components": properties.get("Components") or "",
             "role": role,
@@ -173,7 +194,7 @@ def convert_geometry_coordinates(value):
     return [convert_geometry_coordinates(item) for item in value]
 
 
-def prepare_modern_data():
+def prepare_modern_data(polity_dates):
     source = load_json(ROOT / "data/raw/natural-earth/geojson/ne_50m_admin_0_countries.geojson")
     features = []
     for feature in source["features"]:
@@ -197,6 +218,7 @@ def prepare_modern_data():
                 "Area": 0,
                 "Wikipedia": name,
                 "Wikidata": properties.get("WIKIDATAID") or "",
+                **polity_date_properties(properties.get("WIKIDATAID") or "", polity_dates),
                 "MemberOf": f"({sovereignty})" if is_member else "",
                 "Components": "",
                 "role": "member" if is_member else "polity",
@@ -237,6 +259,7 @@ def prepare_modern_data():
                 "Area": 0,
                 "Wikipedia": "",
                 "Wikidata": "",
+                **polity_date_properties("", polity_dates),
                 "MemberOf": "",
                 "Components": "",
                 "role": "admin-province",
@@ -269,12 +292,34 @@ def prepare_modern_data():
     print(f"Wrote {len(features)} pending-review modern features to {output}")
 
 
+def prepare_polity_attributes():
+    source_path = ROOT / "data/raw/wikidata/polity-attributes.json"
+    source = load_json(source_path) if source_path.exists() else {}
+    output = OUTPUT_DIR / "polity-attributes.json"
+    with output.open("w", encoding="utf-8", newline="\n") as output_file:
+        json.dump({
+            "source": "Wikidata",
+            "sourceUrl": "https://www.wikidata.org/",
+            "license": "CC0 1.0",
+            "licenseUrl": "https://www.wikidata.org/wiki/Wikidata:Copyright",
+            "reviewStatus": "pending",
+            "properties": source.get("properties", {}),
+            "relatedProperties": source.get("relatedProperties", {}),
+            "entities": source.get("entities", {}),
+            "relatedEntities": source.get("relatedEntities", {}),
+            "labels": source.get("labels", {}),
+        }, output_file, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    print(f"Wrote {len(source.get('entities', {}))} attributed entities to {output}")
+
+
 def main():
     source = load_json(SOURCE)
     labels = load_json(ROOT / "data/raw/wikidata/labels-zh.json")["entities"]
+    dates_path = ROOT / "data/raw/wikidata/polity-dates.json"
+    polity_dates = load_json(dates_path)["entities"] if dates_path.exists() else {}
     overrides = load_json(ROOT / "prototype/config/name-overrides.json")
     features = [
-        prepare_feature(feature, index, labels, overrides)
+        prepare_feature(feature, index, labels, overrides, polity_dates)
         for index, feature in enumerate(source["features"])
     ]
     mexico_1912 = next(
@@ -304,7 +349,8 @@ def main():
     shutil.copyfile(LICENSE, OUTPUT_DIR / "CLIO-PATRIA-LICENSE.md")
     print(f"Wrote {len(features)} features to {OUTPUT} ({OUTPUT.stat().st_size / 1024 / 1024:.1f} MiB)")
     prepare_base_data()
-    prepare_modern_data()
+    prepare_modern_data(polity_dates)
+    prepare_polity_attributes()
 
 
 if __name__ == "__main__":

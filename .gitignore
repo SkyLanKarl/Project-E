@@ -1,5 +1,6 @@
 upstream/
 data/raw/
+.venv/
 .tmp-browser/
 __pycache__/
 *.pyc

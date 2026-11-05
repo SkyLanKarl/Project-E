@@ -23,6 +23,9 @@ h1 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 27px; f
 .topbar-actions { display: flex; align-items: center; gap: 20px; }
 .scope-badge { padding: 7px 10px; border: 1px solid #53604c; border-radius: 4px; color: #c9d7bd; font-size: 11px; letter-spacing: 0.08em; }
 .text-button { border: 0; background: transparent; color: var(--accent); cursor: pointer; }
+.base-select-label { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 11px; }
+#base-select { padding: 7px 9px; border: 1px solid #455449; border-radius: 4px; background: #17211e; color: #e5efdf; cursor: pointer; }
+#base-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .map-stage { position: relative; min-height: 0; overflow: hidden; background: #111c1b; }
 #map { position: absolute; inset: 0; }
@@ -53,6 +56,12 @@ h1 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 27px; f
 .detail-list div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
 .detail-list dt { color: var(--muted); }
 .detail-list dd { margin: 0; text-align: right; }
+.detail-panel { max-height: calc(100% - 48px); overflow: auto; }
+.detail-attributes { border-bottom: 1px solid var(--line); }
+.detail-attributes summary { padding: 14px 0; color: var(--accent); font-size: 12px; cursor: pointer; }
+.detail-attributes summary span { color: var(--muted); font-size: 10px; }
+.detail-attributes .detail-list { border-top: 0; }
+.attribute-note { color: var(--muted); font-size: 10px; line-height: 1.6; }
 .detail-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .detail-links a { padding: 7px 10px; border: 1px solid #455449; border-radius: 4px; color: #e5efdf; font-size: 11px; text-decoration: none; }
 .detail-links a:hover { border-color: var(--accent); }
@@ -74,10 +83,16 @@ h1 { margin: 0; font-family: Georgia, "Noto Serif SC", serif; font-size: 27px; f
 .play-button { display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--accent); border-color: var(--accent); color: #192112; font-weight: 700; }
 .speed-button { width: 42px; color: var(--accent); }
 .step-label { margin-left: 6px; color: var(--muted); font-size: 11px; }
-.year-slider { width: 100%; height: 16px; margin: 0; accent-color: var(--accent); cursor: pointer; }
-.range-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 9px; }
-.quick-years { display: flex; justify-content: space-between; gap: 6px; margin-top: 10px; }
-.quick-years button { flex: 1; padding: 4px 6px; border: 0; border-radius: 3px; background: transparent; color: #aebbb0; font-size: 10px; cursor: pointer; }
+.timeline-track { position: relative; width: calc(100% - 16px); height: 24px; margin: 0 8px; touch-action: none; cursor: pointer; }
+.timeline-track::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-50%); background: #53604c; }
+.timeline-track:focus-within::before { background: var(--accent); }
+.year-handle { position: absolute; left: 0; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px rgba(216,240,143,0.12); transform: translate(-50%, -50%); pointer-events: none; }
+.year-slider { position: absolute; inset: 0; width: 100%; height: 24px; margin: 0; opacity: 0; pointer-events: none; }
+.era-buttons { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; min-height: 40px; padding-top: 6px; }
+.era-buttons button { min-width: 96px; min-height: 32px; padding: 7px 18px; border: 1px solid #39473f; border-radius: 5px; background: #17211e; color: #aebbb0; font-size: 12px; cursor: pointer; }
+.era-buttons button:hover, .era-buttons button.is-active { border-color: var(--accent); color: var(--accent); background: #28342a; }
+.quick-years { position: relative; width: calc(100% - 16px); height: 34px; margin: 0 8px; overflow: visible; }
+.quick-years button { position: absolute; top: 0; padding: 3px 5px; border: 0; border-radius: 3px; background: transparent; color: #aebbb0; font-size: 10px; white-space: nowrap; cursor: pointer; }
 .quick-years button:hover, .quick-years button.is-active { background: #28342a; color: var(--accent); }
 
 @media (max-width: 680px) {
