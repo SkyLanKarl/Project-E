@@ -102,6 +102,8 @@ function showDetail(properties) {
   }
   if (properties.role === "claim") {
     elements.detailRelation.textContent = "非政治实体 · 不作为法定国界";
+  } else if (properties.role === "admin-province") {
+    elements.detailRelation.textContent = "中国省级行政区 · 2024 年参考";
   } else if (properties.Components) {
     const members = properties.Components.split(";").map(localizedName).join("、");
     elements.detailRelation.textContent = `复合政治实体 · 成员：${members}`;
@@ -114,12 +116,15 @@ function showDetail(properties) {
     wikidata: "Wikidata 中文标签",
     override: "本地译名 · 待审校",
     "natural-earth": "Natural Earth 中文名 · 待审定",
+    datav: "DataV 中文行政区名 · 待审定",
     pending: "待翻译"
   };
   elements.detailNameReview.textContent = nameReviewLabels[properties.NameReview] || "待审校";
-  elements.detailSource.textContent = properties.Source === "user-provided"
-    ? "来源：用户提供的十段线 GeoJSON · 几何来源、坐标系与版本待核；1953 年起始显示为当前项目设定，不是该几何自带的史料结论。"
-    : year === 2024
+  elements.detailSource.textContent = properties.Source === "DataV"
+    ? "来源：阿里云 DataV / 高德行政边界 · 显示副本由 GCJ-02 迭代转换为 WGS 84；原始顶点未抽稀，许可与审定状态待核。DataV 台湾省要素未导入，现有台湾记录仍来自 Natural Earth。"
+    : properties.Source === "user-provided"
+      ? "来源：用户提供的十段线 GeoJSON · 几何来源、坐标系与版本待核；1953 年起始显示为当前项目设定，不是该几何自带的史料结论。"
+      : year === 2024
       ? "2024 底稿：Natural Earth 50m · 公共领域 · 待人工审定；保留来源的主权国与地区分类，不代表本项目立场。"
       : "几何来源：Cliopatria v0.2.1 · CC BY 4.0；几何有效期不等于政权建立与灭亡时间。";
   elements.detailLinks.replaceChildren();
@@ -140,12 +145,16 @@ function updateLabels() {
   labelMarkers.forEach((marker) => marker.remove());
   labelMarkers = [];
   const zoom = map.getZoom();
+  const bounds = map.getBounds();
   const limit = zoom < 2 ? 45 : zoom < 3.5 ? 60 : 90;
   const candidates = activeCollection.features
     .filter((feature) => (
       feature.properties.role !== "composite"
       && feature.properties.FromYear <= year
       && feature.properties.ToYear >= year
+      && (feature.properties.LabelMinZoom || 0) <= zoom
+      && feature.properties.LabelPoint
+      && bounds.contains(feature.properties.LabelPoint)
     ))
     .sort((a, b) => (
       Number(b.properties.GeometryStatus === "carry-forward") - Number(a.properties.GeometryStatus === "carry-forward")
@@ -442,6 +451,7 @@ function initializeMap() {
   map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
   map.on("load", loadData);
   map.on("zoomend", updateLabels);
+  map.on("moveend", updateLabels);
   map.on("click", "polity-fill", (event) => {
     const feature = event.features?.find((item) => item.properties.role !== "composite")
       || event.features?.[0];

@@ -16,7 +16,7 @@
 - 按缩放级别显示中文名称，详情保留英文原名及 Wikidata 链接；
 - 区分来源原始几何、复合政治实体、关系成员和推断延续几何；
 - 墨西哥 1913—1919 年采用单独确认的 1912 年几何延续规则；
-- 2024 年使用独立的 Natural Earth 参考层，并标记为待人工审定；
+- 2024 年以 Natural Earth 为现代参考层；中国大陆及港澳改用 DataV 省级几何，台湾继续保留 Natural Earth 原记录；
 - 1953 年起显示用户提供的南海断续线，作为来源及版本待核的主张边界，不作为法定国界；
 - 静态部署到 GitHub Pages，推送 `main` 后自动更新。
 
@@ -26,7 +26,7 @@
 - **不强行统一岸线。**Cliopatria 与 Natural Earth 的岸线可能不一致；历史层保留原始几何，不为了视觉效果按现代岸线裁切。
 - **不把政治实体记录数当作独立国家数。**复合政体、成员政体、殖民地和其他政治实体需要分别解释。
 - **不自动填补历史缺口。**当前仅墨西哥 1913—1919 年应用了明确的延续案例，并在地图和详情中标注为推断。
-- **2024 年参考层尚未完成人工审定。**Natural Earth 仅作为底稿，其主权国、地区分类和中文名均需继续审核。
+- **2024 年参考层尚未完成人工审定。**Natural Earth 与 DataV 仅作为底稿；DataV 显示副本由 GCJ-02 转换为 WGS 84，未抽稀顶点，其许可、主权国及地区分类仍需继续审核。
 - 中文名称来自 Wikidata 或本地待审校译名表，不应视为已经完成的历史名词审定。
 - 当前尚无连续战线插值、边界段稳定对应关系、事件—边界关联和完整修订审核机制。
 
@@ -52,6 +52,7 @@ http://127.0.0.1:8000/
 |---|---|---|---|
 | 历史政权几何、年份区间 | [Cliopatria v0.2.1](https://github.com/Seshat-Global-History-Databank/cliopatria/tree/v0.2.1) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | 保留署名、许可链接和修改说明 |
 | 陆地、水系、海岸线及 2024 年底稿 | [Natural Earth](https://www.naturalearthdata.com/) | 公共领域 | 保留来源说明，继续审核历史适用性 |
+| 2024 年中国省级边界 | [阿里云 DataV](https://geo.datav.aliyun.com/) | 待核实 | 原始坐标为 GCJ-02；显示副本转换为 WGS 84，未抽稀 |
 | 中文实体名称 | [Wikidata](https://www.wikidata.org/) | [CC0 1.0](https://www.wikidata.org/wiki/Wikidata:Copyright) | 英文原名与实体 ID 同时保留 |
 | 地图渲染 | [MapLibre GL JS 5.6.0](https://github.com/maplibre/maplibre-gl-js) | BSD-3-Clause | 许可文本位于 `prototype/vendor/maplibre-LICENSE.txt` |
 

@@ -134,19 +134,61 @@ def prepare_feature(feature, index, labels, overrides):
     }
 
 
+def wgs84_to_gcj02(lon, lat):
+    import math
+    if not (73.66 < lon < 135.05 and 3.86 < lat < 53.55):
+        return lon, lat
+    a = 6378245.0
+    ee = 0.00669342162296594323
+    x = lon - 105.0
+    y = lat - 35.0
+    dlat = -100.0 + 2.0 * x + 3.0 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * math.sqrt(abs(x))
+    dlat += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
+    dlat += (20.0 * math.sin(y * math.pi) + 40.0 * math.sin(y / 3.0 * math.pi)) * 2.0 / 3.0
+    dlat += (160.0 * math.sin(y / 12.0 * math.pi) + 320 * math.sin(y * math.pi / 30.0)) * 2.0 / 3.0
+    dlon = 300.0 + x + 2.0 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * math.sqrt(abs(x))
+    dlon += (20.0 * math.sin(6.0 * x * math.pi) + 20.0 * math.sin(2.0 * x * math.pi)) * 2.0 / 3.0
+    dlon += (20.0 * math.sin(x * math.pi) + 40.0 * math.sin(x / 3.0 * math.pi)) * 2.0 / 3.0
+    dlon += (150.0 * math.sin(x / 12.0 * math.pi) + 300.0 * math.sin(x / 30.0 * math.pi)) * 2.0 / 3.0
+    radlat = lat / 180.0 * math.pi
+    magic = 1 - ee * math.sin(radlat) ** 2
+    sqrt_magic = math.sqrt(magic)
+    dlat = dlat * 180.0 / ((a * (1 - ee)) / (magic * sqrt_magic) * math.pi)
+    dlon = dlon * 180.0 / (a / sqrt_magic * math.cos(radlat) * math.pi)
+    return lon + dlon, lat + dlat
+
+
+def gcj02_to_wgs84(lon, lat):
+    wgs_lon, wgs_lat = lon, lat
+    for _ in range(4):
+        converted_lon, converted_lat = wgs84_to_gcj02(wgs_lon, wgs_lat)
+        wgs_lon -= converted_lon - lon
+        wgs_lat -= converted_lat - lat
+    return [wgs_lon, wgs_lat]
+
+
+def convert_geometry_coordinates(value):
+    if isinstance(value, list) and len(value) >= 2 and isinstance(value[0], (int, float)):
+        return gcj02_to_wgs84(value[0], value[1])
+    return [convert_geometry_coordinates(item) for item in value]
+
+
 def prepare_modern_data():
     source = load_json(ROOT / "data/raw/natural-earth/geojson/ne_50m_admin_0_countries.geojson")
     features = []
-    for index, feature in enumerate(source["features"]):
+    for feature in source["features"]:
         properties = feature["properties"]
         name = properties.get("NAME_EN") or properties["NAME"]
+        if name == "People's Republic of China" or properties.get("WIKIDATAID") in {"Q148", "Q8646", "Q14773"}:
+            continue
         sovereignty = properties.get("SOVEREIGNT") or name
         is_member = properties.get("TYPE") not in {"Sovereign country", "Country"} and sovereignty != name
+        feature_id = len(features)
         features.append({
             "type": "Feature",
-            "id": index,
+            "id": feature_id,
             "properties": {
-                "id": index,
+                "id": feature_id,
                 "Name": name,
                 "NameZh": properties.get("NAME_ZH") or name,
                 "NameReview": "natural-earth",
@@ -164,6 +206,7 @@ def prepare_modern_data():
                 "ReviewStatus": "pending",
                 "Type": properties.get("TYPE") or "",
                 "Sovereignty": sovereignty,
+                "Source": "Natural Earth",
                 "LabelPoint": label_point(feature["geometry"]),
                 "LabelPriority": properties.get("POP_EST") or 0,
                 "color": color_index(name),
@@ -171,6 +214,47 @@ def prepare_modern_data():
             "geometry": {
                 "type": feature["geometry"]["type"],
                 "coordinates": round_coordinates(feature["geometry"]["coordinates"]),
+            },
+        })
+    china = load_json(ROOT / "data/raw/aliyun-datav/100000_full.json")
+    for feature in china["features"]:
+        properties = feature["properties"]
+        if properties.get("adcode") in {710000, "100000_JD"}:
+            continue
+        name = properties["name"]
+        feature_id = len(features)
+        center = properties.get("centroid") or properties["center"]
+        features.append({
+            "type": "Feature",
+            "id": feature_id,
+            "properties": {
+                "id": feature_id,
+                "Name": name,
+                "NameZh": name,
+                "NameReview": "datav",
+                "FromYear": 2024,
+                "ToYear": 2024,
+                "Area": 0,
+                "Wikipedia": "",
+                "Wikidata": "",
+                "MemberOf": "",
+                "Components": "",
+                "role": "admin-province",
+                "GeometryStatus": "reference",
+                "SourceFromYear": 2024,
+                "SourceToYear": 2024,
+                "ReviewStatus": "pending",
+                "Type": "province",
+                "Sovereignty": "People's Republic of China",
+                "Source": "DataV",
+                "LabelPoint": gcj02_to_wgs84(*center),
+                "LabelPriority": 1,
+                "LabelMinZoom": 4,
+                "color": color_index("People's Republic of China"),
+            },
+            "geometry": {
+                "type": feature["geometry"]["type"],
+                "coordinates": convert_geometry_coordinates(feature["geometry"]["coordinates"]),
             },
         })
     output = OUTPUT_DIR / "modern-2024.geojson"
